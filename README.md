@@ -13,6 +13,22 @@ module "vpc" {
   ssh_keys = {
     key-name = "ssh-rsa AAAAB3Nz...cIVC9ODX2bJyG3zbFyeAy83U="
   }
+  custom_sg_rules = [
+    {
+      from_port   = 4000
+      to_port     = 4000
+      protocol    = "tcp"
+      description = "Blockscout port"
+      cidr_blocks = "10.5.0.0/16"
+    },
+    {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      description = "SSH access"
+      cidr_blocks = "0.0.0.0/0"
+    }
+  ]
   vpcs = {
     vpc-supernet = {
       name                 = "vpc-supernet"

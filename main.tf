@@ -13,17 +13,15 @@ module "vpc" {
 }
 
 module "sg" {
-  source      = "terraform-aws-modules/security-group/aws"
-  version     = "4.16.0"
-  for_each    = var.vpcs
-  name        = "http-and-https"
-  description = "SG for access to app http and https"
-  vpc_id      = module.vpc[each.key].vpc_id
-
-  ingress_cidr_blocks = ["0.0.0.0/0"]
-  egress_cidr_blocks  = ["0.0.0.0/0"]
-  ingress_rules       = ["http-80-tcp", "https-443-tcp"]
-  egress_rules        = ["all-all"]
+  source                   = "terraform-aws-modules/security-group/aws"
+  version                  = "4.16.0"
+  for_each                 = var.vpcs
+  name                     = "for-supernet"
+  description              = "SG for app"
+  vpc_id                   = module.vpc[each.key].vpc_id
+  egress_cidr_blocks       = ["0.0.0.0/0"]
+  egress_rules             = ["all-all"]
+  ingress_with_cidr_blocks = var.custom_sg_rules
 }
 
 

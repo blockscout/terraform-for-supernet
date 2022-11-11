@@ -44,3 +44,8 @@ variable "docker_compose_values" {
     rust_verification_service_url = "https://sc-verifier.aws-k8s.blockscout.com/"
   }
 }
+
+variable "custom_sg_rules" {
+  type    = list(map(string))
+  default = []
+}
