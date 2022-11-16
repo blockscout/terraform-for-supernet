@@ -66,7 +66,7 @@ module "vpc" {
     supernet-test = {
       instance_type = "t2.medium"
       create_iam_instance_profile = false
-      key_name = "maslatsov"
+      key_name = "key-name"
       subnet_id = "subnet-0cf30a"
       sg_id     = ["sg-0c2e06"]
       tags      = {}
