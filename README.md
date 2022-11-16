@@ -1,5 +1,5 @@
 # Module for create vpc resources, security groups, ec2
-Local example:
+Locals example:
 ```
 locals {
   region = "us-east-1"
