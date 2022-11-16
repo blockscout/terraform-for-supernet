@@ -95,7 +95,7 @@ WantedBy=multi-user.target
 TEMPLATE
 systemctl start docker_compose_service
 EOF
-  values_for_ec2 = merge(values({ for k, vpc in var.vpcs : k => {
+  values_for_ec2 = merge(values({ for k, vpc in var.new_vpcs : k => {
     for ec2 in vpc.ec2 : ec2.name => {
       name                        = ec2.name
       ami                         = lookup(ec2, "ami", null)

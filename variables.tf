@@ -1,4 +1,9 @@
-variable "vpcs" {
+variable "ec2_instances_to_existed_vpc" {
+  type = any
+  default = {}
+}
+
+variable "new_vpcs" {
   type    = any
   default = {}
 }

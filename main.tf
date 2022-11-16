@@ -1,7 +1,7 @@
 module "vpc" {
   source               = "terraform-aws-modules/vpc/aws"
   version              = "3.18.1"
-  for_each             = var.vpcs
+  for_each             = var.new_vpcs
   name                 = each.value.name
   cidr                 = each.value.cidr
   azs                  = each.value.azs
@@ -15,7 +15,7 @@ module "vpc" {
 module "sg" {
   source                   = "terraform-aws-modules/security-group/aws"
   version                  = "4.16.0"
-  for_each                 = var.vpcs
+  for_each                 = var.new_vpcs
   name                     = "for-supernet"
   description              = "SG for app"
   vpc_id                   = module.vpc[each.key].vpc_id
@@ -23,7 +23,6 @@ module "sg" {
   egress_rules             = ["all-all"]
   ingress_with_cidr_blocks = var.custom_sg_rules
 }
-
 
 data "aws_ami" "ubuntu" {
   most_recent = true
@@ -65,8 +64,7 @@ data "aws_subnet" "this" {
   ]
 }
 
-
-module "ec2_instance" {
+module "ec2_instance_to_new_vpc" {
   source                      = "terraform-aws-modules/ec2-instance/aws"
   version                     = "4.2.1"
   for_each                    = local.values_for_ec2
@@ -84,4 +82,21 @@ module "ec2_instance" {
   depends_on = [
     data.aws_subnet.this
   ]
+}
+
+module "ec2_instances_to_existed_vpc" {
+  source                      = "terraform-aws-modules/ec2-instance/aws"
+  version                     = "4.2.1"
+  for_each                    = var.ec2_instances_to_existed_vpc
+  name                        = each.key
+  ami                         = data.aws_ami.ubuntu.id
+  instance_type               = each.value.instance_type
+  key_name                    = each.value.key_name
+  monitoring                  = false
+  vpc_security_group_ids      = each.value.sg_id
+  subnet_id                   = each.value.subnet_id
+  create_iam_instance_profile = each.value.create_iam_instance_profile
+  tags                        = each.value.tags
+  user_data                   = local.user_data
+  user_data_replace_on_change = true
 }

@@ -1,13 +1,15 @@
 # Module for create vpc resources, security groups, ec2
-Example:
+Local example:
 ```
 locals {
   region = "us-east-1"
   tags = {
     terraform_managed = true
   }
-
 }
+```
+Create new vpc, sg, ec2:
+```
 module "vpc" {
   source = "./aws"
   ssh_keys = {
@@ -51,5 +53,68 @@ module "vpc" {
       ]
     }
   }
+}
+```
+Use existed vpc:
+```
+module "vpc" {
+  source = "./aws"
+  ssh_keys = {
+    key-name = "ssh-rsa AAAAB3Nza..."
+  }
+  ec2_instances_to_existed_vpc = {
+    supernet-test = {
+      instance_type = "t2.medium"
+      create_iam_instance_profile = false
+      key_name = "maslatsov"
+      subnet_id = "subnet-0cf30a"
+      sg_id     = ["sg-0c2e06"]
+      tags      = {}
+    }
+  }
+```
+Example of configration lb module:
+```
+
+  source  = "terraform-aws-modules/alb/aws"
+  version = "8.2.1"
+  name = "supernet-test"
+
+  load_balancer_type = "application"
+
+  vpc_id             = "vpc-05626f"
+  subnets            = ["subnet-0cf30ac", "subnet-0120c87"]
+  security_groups    = ["sg-0c2e06c"]
+
+  target_groups = [
+    {
+      name_prefix      = "pref-"
+      backend_protocol = "HTTP"
+      backend_port     = 80
+      target_type      = "instance"
+      targets = {
+        my_target = {
+          target_id = module.vpc.instance_id["supernet-test"]
+          port = 4000
+        }
+      }
+    }
+  ]
+
+  http_tcp_listeners = [
+    {
+      port               = 80
+      protocol           = "HTTP"
+      target_group_index = 0
+    }
+  ]
+
+  tags = {
+    Environment = "Test"
+  }
+
+  depends_on = [
+    module.vpc
+  ]
 }
 ```
