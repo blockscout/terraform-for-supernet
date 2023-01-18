@@ -1,8 +1,3 @@
-variable "ec2_instances_to_existed_vpc" {
-  type    = any
-  default = {}
-}
-
 variable "create_new_vpc" {
   type    = bool
   default = true
