@@ -1,120 +1,106 @@
 # Module for create vpc resources, security groups, ec2
-Locals example:
+Examples:   
+New vpc and deploy database rds:
 ```
 locals {
   region = "us-east-1"
   tags = {
     terraform_managed = true
+    project           = "blockscout-supernet"
   }
 }
-```
-Create new vpc, sg, ec2:
-```
 module "vpc" {
   source = "./aws"
-  ssh_keys = {
-    key-name = "ssh-rsa AAAAB3Nz...cIVC9ODX2bJyG3zbFyeAy83U="
-  }
-  custom_sg_rules = [
-    {
-      from_port   = 4000
-      to_port     = 4000
-      protocol    = "tcp"
-      description = "Blockscout port"
-      cidr_blocks = "10.5.0.0/16"
-    },
-    {
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      description = "SSH access"
-      cidr_blocks = "0.0.0.0/0"
-    }
-  ]
-  vpcs = {
-    vpc-supernet = {
-      name                 = "vpc-supernet"
-      cidr                 = "10.5.0.0/16"
-      azs                  = ["${local.region}a", "${local.region}b", "${local.region}c"]
-      private_subnets      = ["10.5.1.0/24", "10.5.2.0/24", "10.5.3.0/24"]
-      public_subnets       = ["10.5.101.0/24", "10.5.102.0/24", "10.5.103.0/24"]
-      enable_nat_gateway   = true
-      enable_dns_hostnames = true
-      tags                 = local.tags
-      ec2 = [
-        {
-          name                        = "test"
-          az                          = "${local.region}a"
-          instance_type               = "t2.medium"
-          access_type                 = "public"
-          create_iam_instance_profile = true
-          key_name             = "key-name"
-        }
-      ]
-    }
-  }
+  vpc_name               = "name"
+  ssl_certificate_arn    = "<arn>"
+  deploy_ec2_instance_db = false
+  deploy_rds_db          = true
+  tags                   = local.tags
 }
 ```
-Use existed vpc:
+!!! For work with existed vpc needs a subnet group: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_VPC.WorkingWithRDSInstanceinaVPC.html#USER_VPC.Subnets  
+Existed vpc and deploy database rds:
 ```
-module "vpc" {
-  source = "./aws"
-  ssh_keys = {
-    key-name = "ssh-rsa AAAAB3Nza..."
-  }
-  ec2_instances_to_existed_vpc = {
-    supernet-test = {
-      instance_type = "t2.medium"
-      create_iam_instance_profile = false
-      key_name = "key-name"
-      subnet_id = "subnet-0cf30a"
-      sg_id     = ["sg-0c2e06"]
-      tags      = {}
-    }
-  }
-```
-Example of configration lb module:
-```
-
-  source  = "terraform-aws-modules/alb/aws"
-  version = "8.2.1"
-  name = "supernet-test"
-
-  load_balancer_type = "application"
-
-  vpc_id             = "vpc-05626f"
-  subnets            = ["subnet-0cf30ac", "subnet-0120c87"]
-  security_groups    = ["sg-0c2e06c"]
-
-  target_groups = [
-    {
-      name_prefix      = "pref-"
-      backend_protocol = "HTTP"
-      backend_port     = 80
-      target_type      = "instance"
-      targets = {
-        my_target = {
-          target_id = module.vpc.instance_id["supernet-test"]
-          port = 4000
-        }
-      }
-    }
-  ]
-
-  http_tcp_listeners = [
-    {
-      port               = 80
-      protocol           = "HTTP"
-      target_group_index = 0
-    }
-  ]
-
+locals {
+  region = "us-east-1"
   tags = {
-    Environment = "Test"
+    terraform_managed = true
+    project           = "blockscout-supernet"
   }
-
-  depends_on = [
-    module.vpc
-  ]
+}
+module "vpc" {
+  source = "./aws"
+  existed_vpc_id = "vpc-05626****"
+  existed_private_subnets_ids = ["subnet-*", "subnet-*", "subnet-*"]
+  existed_public_subnets_ids = ["subnet-*", "subnet-*", "subnet-*"]
+  existed_rds_subnet_group_name = "<name>"
+  ssl_certificate_arn = "<arn>"
 }
 ```
+## Requirements
+
+| Name | Version  |
+|------|----------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ">= 1.3.0" |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ">= 4.39.0" |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ">= 4.39" |
+
+## Modules
+
+| Name     | Source                                                                | Version |
+|----------|-----------------------------------------------------------------------|---------|
+| VPC      | https://github.com/terraform-aws-modules/terraform-aws-vpc            | 3.18.1  |
+| SG       | https://github.com/terraform-aws-modules/terraform-aws-security-group | 4.16.0  |
+| Key pair | https://github.com/terraform-aws-modules/terraform-aws-key-pair       | n/a     |
+| RDS      | https://github.com/terraform-aws-modules/terraform-aws-rds            | 5.1.1   |
+| EC2      | https://github.com/terraform-aws-modules/terraform-aws-ec2-instance   | 4.2.1   |
+| ALB      | https://github.com/terraform-aws-modules/terraform-aws-alb            | 8.2.1   |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [aws_ami.ubuntu](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
+| [aws_availability_zones.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
+| [aws_subnet.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnet) | data source |
+| [aws_subnets.selected](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnets) | data source |
+| [aws_vpc.selected](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/vpc) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default                                                                                                                                                                                                                                                                                                                                                                                                                                   | Required |
+|------|-------------|------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------:|
+| <a name="input_blockscout_settings"></a> [blockscout\_settings](#input\_blockscout\_settings) | Settings of blockscout app | <pre>object({<br>    postgres_password             = string<br>    postgres_user                 = string<br>    postgres_host                 = string<br>    blockscout_docker_image       = string<br>    rpc_address                   = string<br>    chain_id                      = string<br>    rust_verification_service_url = string<br>    ws_address                    = string<br>  })</pre> | <pre>{<br>  "blockscout_docker_image": "blockscout/blockscout-polygon-supernets:4.1.8-prerelease-651fbf3e",<br>  "chain_id": "93201",<br>  "postgres_host": "postgres",<br>  "postgres_password": "postgres",<br>  "postgres_user": "postgres",<br>  "rpc_address": "https://rpc-supertestnet.polygon.technology",<br>  "rust_verification_service_url": "https://sc-verifier.aws-k8s.blockscout.com/", <br>  "ws_address": ""<br>}</pre> | no |
+| <a name="input_deploy_ec2_instance_db"></a> [deploy\_ec2\_instance\_db](#input\_deploy\_ec2\_instance\_db) | Create ec2 instance with postgresql db in docker | `bool` | `true`                                                                                                                                                                                                                                                                                                                                                                                                                                    | no |
+| <a name="input_deploy_rds_db"></a> [deploy\_rds\_db](#input\_deploy\_rds\_db) | Enabled deploy rds | `bool` | `false`                                                                                                                                                                                                                                                                                                                                                                                                                                   | no |
+| <a name="input_enabled_dns_hostnames"></a> [enabled\_dns\_hostnames](#input\_enabled\_dns\_hostnames) | Autocreate dns names for ec2 instance in route53. Required for work with default DB | `bool` | `true`                                                                                                                                                                                                                                                                                                                                                                                                                                    | no |
+| <a name="input_enabled_nat_gateway"></a> [enabled\_nat\_gateway](#input\_enabled\_nat\_gateway) | Nat gateway enabled | `bool` | `true`                                                                                                                                                                                                                                                                                                                                                                                                                                    | no |
+| <a name="input_existed_private_subnets_ids"></a> [existed\_private\_subnets\_ids](#input\_existed\_private\_subnets\_ids) | List of existed id private subnets(For instances) | `list(string)` | `[]`                                                                                                                                                                                                                                                                                                                                                                                                                                      | no |
+| <a name="input_existed_public_subnets_ids"></a> [existed\_public\_subnets\_ids](#input\_existed\_public\_subnets\_ids) | List of existed if public subnets(For LB) | `list(string)` | `[]`                                                                                                                                                                                                                                                                                                                                                                                                                                      | no |
+| <a name="input_existed_rds_subnet_group_name"></a> [existed\_rds\_subnet\_group\_name](#input\_existed\_rds\_subnet\_group\_name) | Name of subnet group for RDS deploy | `string` | `""`                                                                                                                                                                                                                                                                                                                                                                                                                                      | no |
+| <a name="input_existed_vpc_id"></a> [existed\_vpc\_id](#input\_existed\_vpc\_id) | Required for using existed vpc. ID of VPC | `string` | `""`                                                                                                                                                                                                                                                                                                                                                                                                                                      | no |
+| <a name="input_image_name"></a> [image\_name](#input\_image\_name) | OS image mask | `string` | `"ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"`                                                                                                                                                                                                                                                                                                                                                                               | no |
+| <a name="input_indexer_instance_type"></a> [indexer\_instance\_type](#input\_indexer\_instance\_type) | AWS instance type | `string` | `"t2.medium"`                                                                                                                                                                                                                                                                                                                                                                                                                             | no |
+| <a name="input_path_docker_compose_files"></a> [path\_docker\_compose\_files](#input\_path\_docker\_compose\_files) | Path in ec2 instance for blockscout files | `string` | `"/opt/blockscout"`                                                                                                                                                                                                                                                                                                                                                                                                                       | no |
+| <a name="input_rds_allocated_storage"></a> [rds\_allocated\_storage](#input\_rds\_allocated\_storage) | Size of rds storage | `number` | `20`                                                                                                                                                                                                                                                                                                                                                                                                                                      | no |
+| <a name="input_rds_instance_type"></a> [rds\_instance\_type](#input\_rds\_instance\_type) | AWS RDS instance type | `string` | `"db.t3.large"`                                                                                                                                                                                                                                                                                                                                                                                                                           | no |
+| <a name="input_rds_max_allocated_storage"></a> [rds\_max\_allocated\_storage](#input\_rds\_max\_allocated\_storage) | Max size of rds storage | `number` | `300`                                                                                                                                                                                                                                                                                                                                                                                                                                     | no |
+| <a name="input_ssh_key_name"></a> [ssh\_key\_name](#input\_ssh\_key\_name) | Ssh key name | `string` | `""`                                                                                                                                                                                                                                                                                                                                                                                                                                      | no |
+| <a name="input_ssh_keys"></a> [ssh\_keys](#input\_ssh\_keys) | Create ssh keys | `map(string)` | `{}`                                                                                                                                                                                                                                                                                                                                                                                                                                      | no |
+| <a name="input_ssl_certificate_arn"></a> [ssl\_certificate\_arn](#input\_ssl\_certificate\_arn) | Certificate for ALB | `string` | n/a                                                                                                                                                                                                                                                                                                                                                                                                                                       | yes |
+| <a name="input_tags"></a> [tags](#input\_tags) | Add custom tags for all resources managed by this script | `map(string)` | `{}`                                                                                                                                                                                                                                                                                                                                                                                                                                      | no |
+| <a name="input_ui_and_api_instance_type"></a> [ui\_and\_api\_instance\_type](#input\_ui\_and\_api\_instance\_type) | AWS instance type | `string` | `"t2.medium"`                                                                                                                                                                                                                                                                                                                                                                                                                             | no |
+| <a name="input_user"></a> [user](#input\_user) | What user to service run as | `string` | `"root"`                                                                                                                                                                                                                                                                                                                                                                                                                                  | no |
+| <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC cidr | `string` | `"10.105.0.0/16"`                                                                                                                                                                                                                                                                                                                                                                                                                         | no |
+| <a name="input_vpc_name"></a> [vpc\_name](#input\_vpc\_name) | VPC name | `string` | `""`                                                                                                                                                                                                                                                                                                                                                                                                                                      | no |
+| <a name="input_vpc_private_subnet_cidrs"></a> [vpc\_private\_subnet\_cidrs](#input\_vpc\_private\_subnet\_cidrs) | Not required! You can set custom private subnets | `list(string)` | `null`                                                                                                                                                                                                                                                                                                                                                                                                                                    | no |
+| <a name="input_vpc_public_subnet_cidrs"></a> [vpc\_public\_subnet\_cidrs](#input\_vpc\_public\_subnet\_cidrs) | Not required! You can set custom public subnets | `list(string)` | `null`                                                                                                                                                                                                                                                                                                                                                                                                                                    | no |
+
+## Outputs
+
+No outputs.

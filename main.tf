@@ -1,12 +1,13 @@
 module "vpc" {
   source               = "terraform-aws-modules/vpc/aws"
   version              = "3.18.1"
-  count                = var.create_new_vpc == true ? 1 : 0
+  count                = var.existed_vpc_id == "" ? 1 : 0
   name                 = var.vpc_name
   cidr                 = var.vpc_cidr
   azs                  = local.azs
   private_subnets      = var.vpc_private_subnet_cidrs == null ? slice(local.subnets, 0, 3) : var.vpc_private_subnet_cidrs
   public_subnets       = var.vpc_public_subnet_cidrs == null ? slice(local.subnets, 3, 6) : var.vpc_public_subnet_cidrs
+  database_subnets     = var.deploy_rds_db ? slice(local.subnets, 6, 8) : []
   enable_nat_gateway   = var.enabled_nat_gateway
   enable_dns_hostnames = var.enabled_dns_hostnames
   tags                 = local.final_tags
@@ -17,7 +18,7 @@ module "lb-sg" {
   version             = "4.16.0"
   name                = "${var.vpc_name}-lb-sg"
   description         = "SG for LB"
-  vpc_id              = var.create_new_vpc == true ? module.vpc[0].vpc_id : var.existed_vpc_id
+  vpc_id              = var.existed_vpc_id == "" ? module.vpc[0].vpc_id : var.existed_vpc_id
   ingress_cidr_blocks = ["0.0.0.0/0"]
   ingress_rules       = ["https-443-tcp", "http-80-tcp"]
   egress_with_cidr_blocks = [
@@ -26,9 +27,10 @@ module "lb-sg" {
       to_port     = 4000
       protocol    = "tcp"
       description = "Blockscout port"
-      cidr_blocks = var.create_new_vpc == true ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
+      cidr_blocks = var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
     }
   ]
+  tags = local.final_tags
 }
 
 module "application-sg" {
@@ -36,7 +38,7 @@ module "application-sg" {
   version            = "4.16.0"
   name               = "${var.vpc_name}-application-sg"
   description        = "SG for instances of application"
-  vpc_id             = var.create_new_vpc == true ? module.vpc[0].vpc_id : var.existed_vpc_id
+  vpc_id             = var.existed_vpc_id == "" ? module.vpc[0].vpc_id : var.existed_vpc_id
   egress_cidr_blocks = ["0.0.0.0/0"] # internet access
   egress_rules       = ["all-all"]   # internet access
   ingress_with_cidr_blocks = [
@@ -45,7 +47,7 @@ module "application-sg" {
       to_port     = 4000
       protocol    = "tcp"
       description = "Blockscout port"
-      cidr_blocks = var.create_new_vpc == true ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
+      cidr_blocks = var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
       self        = true
     }
   ]
@@ -58,6 +60,7 @@ module "application-sg" {
       source_security_group_id = module.lb-sg.security_group_id
     }
   ]
+  tags = local.final_tags
 }
 
 module "db-sg" {
@@ -65,7 +68,7 @@ module "db-sg" {
   version            = "4.16.0"
   name               = "${var.vpc_name}-db-sg"
   description        = "SG for instance of DB"
-  vpc_id             = var.create_new_vpc == true ? module.vpc[0].vpc_id : var.existed_vpc_id
+  vpc_id             = var.existed_vpc_id == "" ? module.vpc[0].vpc_id : var.existed_vpc_id
   egress_cidr_blocks = ["0.0.0.0/0"] # internet access
   egress_rules       = ["all-all"]   # internet access
   ingress_with_source_security_group_id = [
@@ -77,6 +80,7 @@ module "db-sg" {
       source_security_group_id = module.application-sg.security_group_id
     }
   ]
+  tags = local.final_tags
 }
 
 module "key_pair" {
@@ -85,19 +89,49 @@ module "key_pair" {
   for_each   = var.ssh_keys
   key_name   = each.key
   public_key = each.value
+  tags       = local.final_tags
+}
+
+module "rds" {
+  source                              = "terraform-aws-modules/rds/aws"
+  version                             = "5.1.1"
+  count                               = var.deploy_rds_db ? 1 : 0
+  engine                              = "postgres"
+  engine_version                      = "13.7"
+  family                              = "postgres13"
+  major_engine_version                = "13"
+  instance_class                      = var.rds_instance_type
+  allocated_storage                   = var.rds_allocated_storage
+  max_allocated_storage               = var.rds_max_allocated_storage
+  iam_database_authentication_enabled = true
+  identifier                          = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-rds-db"
+  db_name                             = "blockscout"
+  username                            = "blockscout"
+  port                                = 5432
+  multi_az                            = false
+  db_subnet_group_name                = module.vpc[0].database_subnet_group
+  vpc_security_group_ids              = [module.db-sg.security_group_id]
+  maintenance_window                  = "Mon:00:00-Mon:03:00"
+  backup_window                       = "03:00-06:00"
+  enabled_cloudwatch_logs_exports     = []
+  create_cloudwatch_log_group         = false
+  backup_retention_period             = 7
+  skip_final_snapshot                 = true
+  deletion_protection                 = false
+  tags                                = local.final_tags
 }
 
 module "ec2_database" {
   source                      = "terraform-aws-modules/ec2-instance/aws"
   version                     = "4.2.1"
-  count                       = var.ec2_instance_db ? 1 : 0
+  count                       = var.deploy_ec2_instance_db ? 1 : 0
   name                        = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-db-instance"
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = "t2.medium"
   key_name                    = var.ssh_key_name
   monitoring                  = false
   vpc_security_group_ids      = [module.db-sg.security_group_id]
-  subnet_id                   = var.create_new_vpc ? element(module.vpc[0].private_subnets, 0) : element(slice([for i in data.aws_subnet.this : i.id if i.map_public_ip_on_launch == false], 0, 1), 0)
+  subnet_id                   = var.existed_vpc_id == "" ? element(module.vpc[0].private_subnets, 0) : element(slice([for i in data.aws_subnet.this : i.id if i.map_public_ip_on_launch == false], 0, 1), 0)
   create_iam_instance_profile = true
   tags                        = local.final_tags
   iam_role_description        = "IAM role for EC2 instance ${var.vpc_name}-db-instance"
@@ -110,8 +144,8 @@ module "ec2_database" {
       docker_compose_str = templatefile(
         "${path.module}/templates/docker_compose_db.tftpl",
         {
-          postgres_password = var.docker_compose_values["postgres_password"]
-          postgres_user     = var.docker_compose_values["postgres_user"]
+          postgres_password = var.blockscout_settings["postgres_password"]
+          postgres_user     = var.blockscout_settings["postgres_user"]
         }
       )
       path_docker_compose_files = var.path_docker_compose_files
@@ -123,14 +157,13 @@ module "ec2_database" {
 module "ec2_indexer" {
   source                      = "terraform-aws-modules/ec2-instance/aws"
   version                     = "4.2.1"
-  count                       = var.ec2_instance_db ? 1 : 0
-  name                        = "${var.vpc_name}-indexer-instance"
+  name                        = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-indexer-instance"
   ami                         = data.aws_ami.ubuntu.id
-  instance_type               = "t2.medium"
+  instance_type               = var.indexer_instance_type
   key_name                    = var.ssh_key_name
   monitoring                  = false
   vpc_security_group_ids      = [module.application-sg.security_group_id]
-  subnet_id                   = var.create_new_vpc ? element(module.vpc[0].private_subnets, 0) : element(slice([for i in data.aws_subnet.this : i.id if i.map_public_ip_on_launch == false], 0, 1), 0)
+  subnet_id                   = var.existed_vpc_id == "" ? element(module.vpc[0].private_subnets, 0) : element(slice([for i in data.aws_subnet.this : i.id if i.map_public_ip_on_launch == false], 0, 1), 0)
   create_iam_instance_profile = true
   tags                        = local.final_tags
   iam_role_description        = "IAM role for EC2 instance ${var.vpc_name}-indexer-instance"
@@ -143,14 +176,14 @@ module "ec2_indexer" {
       docker_compose_str = templatefile(
         "${path.module}/templates/docker_compose.tftpl",
         {
-          postgres_password             = var.docker_compose_values["postgres_password"]
-          postgres_user                 = var.docker_compose_values["postgres_user"]
-          blockscout_docker_image       = var.docker_compose_values["blockscout_docker_image"]
-          rpc_address                   = var.docker_compose_values["rpc_address"]
-          postgres_host                 = var.deploy_rds ? var.docker_compose_values["postgres_host"] : module.ec2_database[0].private_dns
-          chain_id                      = var.docker_compose_values["chain_id"]
-          rust_verification_service_url = var.docker_compose_values["rust_verification_service_url"]
-          db                            = false
+          postgres_password             = var.deploy_rds_db ? module.rds[0].db_instance_password : var.blockscout_settings["postgres_password"]
+          postgres_user                 = var.deploy_rds_db ? module.rds[0].db_instance_username : var.blockscout_settings["postgres_user"]
+          blockscout_docker_image       = var.blockscout_settings["blockscout_docker_image"]
+          rpc_address                   = var.blockscout_settings["rpc_address"]
+          ws_address                    = var.blockscout_settings["ws_address"]
+          postgres_host                 = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
+          chain_id                      = var.blockscout_settings["chain_id"]
+          rust_verification_service_url = var.blockscout_settings["rust_verification_service_url"]
           indexer                       = true
           api_and_ui                    = false
         }
@@ -167,7 +200,7 @@ module "ec2_api_and_ui" {
   for_each                    = local.private_subnets_map
   name                        = "${var.vpc_name}-api-and-ui-instance"
   ami                         = data.aws_ami.ubuntu.id
-  instance_type               = "t2.medium"
+  instance_type               = var.ui_and_api_instance_type
   key_name                    = var.ssh_key_name
   monitoring                  = false
   vpc_security_group_ids      = [module.application-sg.security_group_id]
@@ -184,14 +217,14 @@ module "ec2_api_and_ui" {
       docker_compose_str = templatefile(
         "${path.module}/templates/docker_compose.tftpl",
         {
-          postgres_password             = var.docker_compose_values["postgres_password"]
-          postgres_user                 = var.docker_compose_values["postgres_user"]
-          blockscout_docker_image       = var.docker_compose_values["blockscout_docker_image"]
-          rpc_address                   = var.docker_compose_values["rpc_address"]
-          postgres_host                 = var.deploy_rds ? var.docker_compose_values["postgres_host"] : module.ec2_database[0].private_dns
-          chain_id                      = var.docker_compose_values["chain_id"]
-          rust_verification_service_url = var.docker_compose_values["rust_verification_service_url"]
-          db                            = false
+          postgres_password             = var.deploy_rds_db ? module.rds[0].db_instance_password : var.blockscout_settings["postgres_password"]
+          postgres_user                 = var.deploy_rds_db ? module.rds[0].db_instance_username : var.blockscout_settings["postgres_user"]
+          blockscout_docker_image       = var.blockscout_settings["blockscout_docker_image"]
+          rpc_address                   = var.blockscout_settings["rpc_address"]
+          ws_address                    = var.blockscout_settings["ws_address"]
+          postgres_host                 = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
+          chain_id                      = var.blockscout_settings["chain_id"]
+          rust_verification_service_url = var.blockscout_settings["rust_verification_service_url"]
           indexer                       = false
           api_and_ui                    = true
         }
@@ -224,6 +257,18 @@ module "alb" {
       }
     }
   ]
+  http_tcp_listeners = [
+    {
+      port        = 80
+      protocol    = "HTTP"
+      action_type = "redirect"
+      redirect = {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+  ]
   https_listeners = [
     {
       port               = 443
@@ -232,7 +277,5 @@ module "alb" {
       certificate_arn    = var.ssl_certificate_arn
     }
   ]
-  tags = {
-    Environment = "Test"
-  }
+  tags = local.final_tags
 }

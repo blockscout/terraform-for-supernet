@@ -27,6 +27,6 @@ data "aws_subnets" "selected" {
 }
 
 data "aws_subnet" "this" {
-  for_each = toset(data.aws_subnets.selected[0].ids)
+  for_each = var.existed_vpc_id != "" ? toset(data.aws_subnets.selected[0].ids) : toset([])
   id       = each.value
 }

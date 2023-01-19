@@ -1,11 +1,19 @@
-variable "create_new_vpc" {
-  type    = bool
-  default = true
+variable "deploy_rds_db" {
+  description = "Enabled deploy rds"
+  type        = bool
+  default     = false
+}
+
+variable "deploy_ec2_instance_db" {
+  description = "Create ec2 instance with postgresql db in docker"
+  type        = bool
+  default     = true
 }
 
 variable "path_docker_compose_files" {
-  type    = string
-  default = "/opt/blockscout"
+  description = "Path in ec2 instance for blockscout files"
+  type        = string
+  default     = "/opt/blockscout"
 }
 
 variable "user" {
@@ -21,13 +29,15 @@ variable "ssh_key_name" {
 }
 
 variable "image_name" {
-  type    = string
-  default = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
+  description = "OS image mask"
+  type        = string
+  default     = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
 }
 
 variable "ssh_keys" {
-  type    = map(string)
-  default = {}
+  description = "Create ssh keys"
+  type        = map(string)
+  default     = {}
 }
 
 variable "vpc_name" {
@@ -66,19 +76,8 @@ variable "enabled_dns_hostnames" {
   default     = true
 }
 
-variable "azs" {
-  description = "List of AZs"
-  type        = list(string)
-  default     = []
-}
-
-variable "ec2_instance_db" {
-  description = "Create ec2 instance with postgresql db in docker"
-  type        = bool
-  default     = true
-}
-
-variable "docker_compose_values" {
+variable "blockscout_settings" {
+  description = "Settings of blockscout app"
   type = object({
     postgres_password             = string
     postgres_user                 = string
@@ -87,6 +86,7 @@ variable "docker_compose_values" {
     rpc_address                   = string
     chain_id                      = string
     rust_verification_service_url = string
+    ws_address                    = string
   })
   default = {
     blockscout_docker_image       = "blockscout/blockscout-polygon-supernets:4.1.8-prerelease-651fbf3e"
@@ -96,18 +96,13 @@ variable "docker_compose_values" {
     rpc_address                   = "https://rpc-supertestnet.polygon.technology"
     chain_id                      = "93201"
     rust_verification_service_url = "https://sc-verifier.aws-k8s.blockscout.com/"
+    ws_address                    = ""
   }
 }
 
-variable "custom_sg_rules" {
-  description = "Add custom rules to SG"
-  type        = list(map(string))
-  default     = []
-}
-
-variable "custom_tags" {
+variable "tags" {
   description = "Add custom tags for all resources managed by this script"
-  type        = object({})
+  type        = map(string)
   default     = {}
 }
 
@@ -115,12 +110,6 @@ variable "existed_vpc_id" {
   description = "Required for using existed vpc. ID of VPC"
   type        = string
   default     = ""
-}
-
-variable "deploy_rds" {
-  description = "Enabled deploy rds"
-  type        = bool
-  default     = false
 }
 
 variable "existed_private_subnets_ids" {
@@ -135,7 +124,43 @@ variable "existed_public_subnets_ids" {
   default     = []
 }
 
-variable "ssl_certificate_arn" {
-  description = ""
+variable "existed_rds_subnet_group_name" {
+  description = "Name of subnet group for RDS deploy"
   type        = string
+  default     = ""
+}
+
+variable "ssl_certificate_arn" {
+  description = "Certificate for ALB"
+  type        = string
+}
+
+variable "indexer_instance_type" {
+  description = "AWS instance type"
+  type        = string
+  default     = "t2.medium"
+}
+
+variable "ui_and_api_instance_type" {
+  description = "AWS instance type"
+  type        = string
+  default     = "t2.medium"
+}
+
+variable "rds_instance_type" {
+  description = "AWS RDS instance type"
+  type        = string
+  default     = "db.t3.large"
+}
+
+variable "rds_allocated_storage" {
+  description = "Size of rds storage"
+  type        = number
+  default     = 20
+}
+
+variable "rds_max_allocated_storage" {
+  description = "Max size of rds storage"
+  type        = number
+  default     = 300
 }
