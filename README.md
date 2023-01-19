@@ -1,4 +1,4 @@
-# Module for create vpc resources, security groups, ec2
+# Module for deploy blockscout to AWS
 Examples:   
 New vpc and deploy database rds:
 ```
