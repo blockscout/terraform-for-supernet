@@ -10,6 +10,7 @@ module "vpc" {
   database_subnets     = var.deploy_rds_db ? slice(local.subnets, 6, 8) : []
   enable_nat_gateway   = var.enabled_nat_gateway
   enable_dns_hostnames = var.enabled_dns_hostnames
+  single_nat_gateway   = var.single_nat_gateway
   tags                 = local.final_tags
 }
 
@@ -136,7 +137,7 @@ module "ec2_database" {
   tags                        = local.final_tags
   iam_role_description        = "IAM role for EC2 instance ${var.vpc_name}-db-instance"
   iam_role_policies = {
-    AdministratorAccess = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   }
   user_data = templatefile(
     "${path.module}/templates/init_script.tftpl",
@@ -154,23 +155,40 @@ module "ec2_database" {
   )
 }
 
-module "ec2_indexer" {
-  source                      = "terraform-aws-modules/ec2-instance/aws"
-  version                     = "4.2.1"
-  name                        = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-indexer-instance"
-  ami                         = data.aws_ami.ubuntu.id
-  instance_type               = var.indexer_instance_type
-  key_name                    = var.ssh_key_name
-  monitoring                  = false
-  vpc_security_group_ids      = [module.application-sg.security_group_id]
-  subnet_id                   = var.existed_vpc_id == "" ? element(module.vpc[0].private_subnets, 0) : element(slice([for i in data.aws_subnet.this : i.id if i.map_public_ip_on_launch == false], 0, 1), 0)
-  create_iam_instance_profile = true
-  tags                        = local.final_tags
-  iam_role_description        = "IAM role for EC2 instance ${var.vpc_name}-indexer-instance"
-  iam_role_policies = {
-    AdministratorAccess = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+module "ec2_asg_indexer" {
+  source                    = "terraform-aws-modules/autoscaling/aws"
+  version                   = "v6.7.1"
+  name                      = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-indexer-instance"
+  min_size                  = 1
+  max_size                  = 1
+  wait_for_capacity_timeout = 0
+  health_check_type         = "EC2"
+  vpc_zone_identifier       = var.existed_vpc_id != "" ? slice(var.existed_private_subnets_ids, 0, 1) : slice(module.vpc[0].private_subnets, 0, 1)
+  instance_refresh = {
+    strategy = "Rolling"
+    preferences = {
+      min_healthy_percentage = 100
+    }
+    triggers = ["tag"]
   }
-  user_data = templatefile(
+  launch_template_name        = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-indexer-launch-template"
+  launch_template_description = "Launch template indexer"
+  update_default_version      = true
+  image_id                    = data.aws_ami.ubuntu.id
+  instance_type               = var.ui_and_api_instance_type
+  ebs_optimized               = false
+  enable_monitoring           = false
+  create_iam_instance_profile = true
+  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-indexer"
+  iam_role_path               = "/"
+  iam_role_description        = "IAM role for indexer instance"
+  iam_role_tags = {
+    CustomIamRole = "Yes"
+  }
+  iam_role_policies = {
+    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  }
+  user_data = base64encode(templatefile(
     "${path.module}/templates/init_script.tftpl",
     {
       docker_compose_str = templatefile(
@@ -191,27 +209,74 @@ module "ec2_indexer" {
       path_docker_compose_files = var.path_docker_compose_files
       user                      = var.user
     }
-  )
+  ))
+  block_device_mappings = [
+    {
+      device_name = "/dev/xvda"
+      no_device   = 0
+      ebs = {
+        delete_on_termination = true
+        encrypted             = false
+        volume_size           = 30
+        volume_type           = "gp2"
+      }
+    }
+  ]
+  network_interfaces = [
+    {
+      delete_on_termination = true
+      description           = "eth0"
+      device_index          = 0
+      security_groups       = [module.application-sg.security_group_id]
+    }
+  ]
+  tag_specifications = [
+    {
+      resource_type = "instance"
+      tags          = local.final_tags
+    },
+    {
+      resource_type = "volume"
+      tags          = local.final_tags
+    }
+  ]
+  tags = local.final_tags
 }
 
-module "ec2_api_and_ui" {
-  source                      = "terraform-aws-modules/ec2-instance/aws"
-  version                     = "4.2.1"
-  for_each                    = local.private_subnets_map
-  name                        = "${var.vpc_name}-api-and-ui-instance"
-  ami                         = data.aws_ami.ubuntu.id
-  instance_type               = var.ui_and_api_instance_type
-  key_name                    = var.ssh_key_name
-  monitoring                  = false
-  vpc_security_group_ids      = [module.application-sg.security_group_id]
-  subnet_id                   = each.value.subnet_id
-  create_iam_instance_profile = true
-  tags                        = local.final_tags
-  iam_role_description        = "IAM role for EC2 instance ${var.vpc_name}-api-and-ui-instance"
-  iam_role_policies = {
-    AdministratorAccess = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+module "ec2_asg_api-and-ui" {
+  source                    = "terraform-aws-modules/autoscaling/aws"
+  version                   = "v6.7.1"
+  name                      = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-api-and-ui-instances"
+  min_size                  = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
+  max_size                  = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
+  wait_for_capacity_timeout = 0
+  health_check_type         = "EC2"
+  vpc_zone_identifier       = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
+  instance_refresh = {
+    strategy = "Rolling"
+    preferences = {
+      min_healthy_percentage = 100
+    }
+    triggers = ["tag"]
   }
-  user_data = templatefile(
+  launch_template_name        = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-api-and-ui-launch-template"
+  launch_template_description = "Launch template api-and-ui"
+  update_default_version      = true
+  image_id                    = data.aws_ami.ubuntu.id
+  instance_type               = var.ui_and_api_instance_type
+  ebs_optimized               = false
+  enable_monitoring           = false
+  create_iam_instance_profile = true
+  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-api-and-ui"
+  iam_role_path               = "/"
+  iam_role_description        = "IAM role for api-and-ui-instances"
+  iam_role_tags = {
+    CustomIamRole = "Yes"
+  }
+  iam_role_policies = {
+    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  }
+  user_data = base64encode(templatefile(
     "${path.module}/templates/init_script.tftpl",
     {
       docker_compose_str = templatefile(
@@ -232,7 +297,39 @@ module "ec2_api_and_ui" {
       path_docker_compose_files = var.path_docker_compose_files
       user                      = var.user
     }
-  )
+  ))
+  block_device_mappings = [
+    {
+      device_name = "/dev/xvda"
+      no_device   = 0
+      ebs = {
+        delete_on_termination = true
+        encrypted             = false
+        volume_size           = 30
+        volume_type           = "gp2"
+      }
+    }
+  ]
+  network_interfaces = [
+    {
+      delete_on_termination = true
+      description           = "eth0"
+      device_index          = 0
+      security_groups       = [module.application-sg.security_group_id]
+    }
+  ]
+  tag_specifications = [
+    {
+      resource_type = "instance"
+      tags          = local.final_tags
+    },
+    {
+      resource_type = "volume"
+      tags          = local.final_tags
+    }
+  ]
+  target_group_arns = module.alb.target_group_arns
+  tags              = local.final_tags
 }
 
 module "alb" {
@@ -245,19 +342,13 @@ module "alb" {
   security_groups    = [module.lb-sg.security_group_id]
   target_groups = [
     {
-      name_prefix      = "pref-"
+      name_prefix      = "apiui-"
       backend_protocol = "HTTP"
-      backend_port     = 80
+      backend_port     = 4000
       target_type      = "instance"
-      targets = {
-        for k, v in local.private_subnets_map : k => {
-          target_id = module.ec2_api_and_ui[k].id
-          port      = 4000
-        }
-      }
     }
   ]
-  http_tcp_listeners = [
+  http_tcp_listeners = var.ssl_certificate_arn != "" ? [
     {
       port        = 80
       protocol    = "HTTP"
@@ -267,15 +358,20 @@ module "alb" {
         protocol    = "HTTPS"
         status_code = "HTTP_301"
       }
-    }
-  ]
-  https_listeners = [
+    }] : [
+    {
+      port        = 80
+      protocol    = "HTTP"
+      action_type = "forward"
+      redirect    = {}
+  }]
+  https_listeners = var.ssl_certificate_arn != "" ? [
     {
       port               = 443
       protocol           = "HTTPS"
       target_group_index = 0
       certificate_arn    = var.ssl_certificate_arn
     }
-  ]
+  ] : []
   tags = local.final_tags
 }

@@ -2,7 +2,7 @@ data "aws_availability_zones" "current" {}
 
 data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["679593333241"]
+  owners      = [var.image_owner]
   filter {
     name   = "name"
     values = [var.image_name]

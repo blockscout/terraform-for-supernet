@@ -34,6 +34,12 @@ variable "image_name" {
   default     = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
 }
 
+variable "image_owner" {
+  description = "ID of image owner"
+  type        = string
+  default     = "679593333241"
+}
+
 variable "ssh_keys" {
   description = "Create ssh keys"
   type        = map(string)
@@ -133,6 +139,7 @@ variable "existed_rds_subnet_group_name" {
 variable "ssl_certificate_arn" {
   description = "Certificate for ALB"
   type        = string
+  default     = ""
 }
 
 variable "indexer_instance_type" {
@@ -163,4 +170,10 @@ variable "rds_max_allocated_storage" {
   description = "Max size of rds storage"
   type        = number
   default     = 300
+}
+
+variable "single_nat_gateway" {
+  description = "Should be true if you want to provision a single shared NAT Gateway across all of your private networks"
+  type        = bool
+  default     = true
 }
