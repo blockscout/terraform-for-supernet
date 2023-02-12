@@ -133,7 +133,7 @@ module "ec2_database" {
   monitoring                  = false
   vpc_security_group_ids      = [module.db-sg.security_group_id]
   subnet_id                   = var.existed_vpc_id == "" ? element(module.vpc[0].private_subnets, 0) : element(slice([for i in data.aws_subnet.this : i.id if i.map_public_ip_on_launch == false], 0, 1), 0)
-  create_iam_instance_profile = true
+  create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
   tags                        = local.final_tags
   iam_role_description        = "IAM role for EC2 instance ${var.vpc_name}-db-instance"
   iam_role_policies = {
@@ -178,7 +178,8 @@ module "ec2_asg_indexer" {
   instance_type               = var.ui_and_api_instance_type
   ebs_optimized               = false
   enable_monitoring           = false
-  create_iam_instance_profile = true
+  create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
+  iam_instance_profile_arn    = var.existed_instance_role_arn
   iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-indexer"
   iam_role_path               = "/"
   iam_role_description        = "IAM role for indexer instance"
@@ -266,7 +267,8 @@ module "ec2_asg_api-and-ui" {
   instance_type               = var.ui_and_api_instance_type
   ebs_optimized               = false
   enable_monitoring           = false
-  create_iam_instance_profile = true
+  create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
+  iam_instance_profile_arn    = var.existed_instance_role_arn
   iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-api-and-ui"
   iam_role_path               = "/"
   iam_role_description        = "IAM role for api-and-ui-instances"

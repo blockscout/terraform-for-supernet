@@ -177,3 +177,15 @@ variable "single_nat_gateway" {
   type        = bool
   default     = true
 }
+
+variable "existed_instance_role_arn" {
+  description = "Existed arn of role which will assume to instances"
+  type        = string
+  default     = null
+}
+
+variable "create_iam_instance_profile_ssm_policy" {
+  description = ""
+  type        = string
+  default     = false
+}
