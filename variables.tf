@@ -178,14 +178,14 @@ variable "single_nat_gateway" {
   default     = true
 }
 
-variable "existed_instance_role_arn" {
-  description = "Existed arn of role which will assume to instances"
+variable "iam_instance_profile_arn" {
+  description = "Amazon Resource Name (ARN) of an existing IAM instance profile. Used when `create_iam_instance_profile_ssm_policy` = `false`"
   type        = string
   default     = null
 }
 
 variable "create_iam_instance_profile_ssm_policy" {
-  description = ""
+  description = "Determines whether an IAM instance profile with SSM policy is created or to use an existing IAM instance profile"
   type        = string
   default     = false
 }

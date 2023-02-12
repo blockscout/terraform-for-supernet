@@ -179,7 +179,7 @@ module "ec2_asg_indexer" {
   ebs_optimized               = false
   enable_monitoring           = false
   create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
-  iam_instance_profile_arn    = var.existed_instance_role_arn
+  iam_instance_profile_arn    = var.iam_instance_profile_arn
   iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-indexer"
   iam_role_path               = "/"
   iam_role_description        = "IAM role for indexer instance"
@@ -268,7 +268,7 @@ module "ec2_asg_api-and-ui" {
   ebs_optimized               = false
   enable_monitoring           = false
   create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
-  iam_instance_profile_arn    = var.existed_instance_role_arn
+  iam_instance_profile_arn    = var.iam_instance_profile_arn
   iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-api-and-ui"
   iam_role_path               = "/"
   iam_role_description        = "IAM role for api-and-ui-instances"

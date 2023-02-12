@@ -78,6 +78,7 @@ module "vpc" {
 | Name | Description | Type | Default                                                                                                                                                                                                                                                                                                                                                                                                                                   | Required |
 |------|-------------|------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------:|
 | <a name="input_blockscout_settings"></a> [blockscout\_settings](#input\_blockscout\_settings) | Settings of blockscout app | <pre>object({<br>    postgres_password             = string<br>    postgres_user                 = string<br>    postgres_host                 = string<br>    blockscout_docker_image       = string<br>    rpc_address                   = string<br>    chain_id                      = string<br>    rust_verification_service_url = string<br>    ws_address                    = string<br>  })</pre> | <pre>{<br>  "blockscout_docker_image": "blockscout/blockscout-polygon-supernets:4.1.8-prerelease-651fbf3e",<br>  "chain_id": "93201",<br>  "postgres_host": "postgres",<br>  "postgres_password": "postgres",<br>  "postgres_user": "postgres",<br>  "rpc_address": "https://rpc-supertestnet.polygon.technology",<br>  "rust_verification_service_url": "https://sc-verifier.aws-k8s.blockscout.com/", <br>  "ws_address": ""<br>}</pre> | no |
+| <a name="input_create_iam_instance_profile_ssm_policy"></a> [create\_iam\_instance\_profile\_ssm\_policy](#input\_create\_iam\_instance\_profile\_ssm\_policy) | Determines whether an IAM instance profile with SSM policy is created or to use an existing IAM instance profile | `string` | `false` | no |
 | <a name="input_deploy_ec2_instance_db"></a> [deploy\_ec2\_instance\_db](#input\_deploy\_ec2\_instance\_db) | Create ec2 instance with postgresql db in docker | `bool` | `true` | no |
 | <a name="input_deploy_rds_db"></a> [deploy\_rds\_db](#input\_deploy\_rds\_db) | Enabled deploy rds | `bool` | `false` | no |
 | <a name="input_enabled_dns_hostnames"></a> [enabled\_dns\_hostnames](#input\_enabled\_dns\_hostnames) | Autocreate dns names for ec2 instance in route53. Required for work with default DB | `bool` | `true` | no |
@@ -86,6 +87,7 @@ module "vpc" {
 | <a name="input_existed_public_subnets_ids"></a> [existed\_public\_subnets\_ids](#input\_existed\_public\_subnets\_ids) | List of existed if public subnets(For LB) | `list(string)` | `[]` | no |
 | <a name="input_existed_rds_subnet_group_name"></a> [existed\_rds\_subnet\_group\_name](#input\_existed\_rds\_subnet\_group\_name) | Name of subnet group for RDS deploy | `string` | `""` | no |
 | <a name="input_existed_vpc_id"></a> [existed\_vpc\_id](#input\_existed\_vpc\_id) | Required for using existed vpc. ID of VPC | `string` | `""` | no |
+| <a name="input_iam_instance_profile_arn"></a> [iam\_instance\_profile\_arn](#input\_iam\_instance\_profile\_arn) | Amazon Resource Name (ARN) of an existing IAM instance profile. Used when `create_iam_instance_profile_ssm_policy` = `false` | `string` | `null` | no |
 | <a name="input_image_name"></a> [image\_name](#input\_image\_name) | OS image mask | `string` | `"ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"` | no |
 | <a name="input_image_owner"></a> [image\_owner](#input\_image\_owner) | ID of image owner | `string` | `"679593333241"` | no |
 | <a name="input_indexer_instance_type"></a> [indexer\_instance\_type](#input\_indexer\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
@@ -104,7 +106,6 @@ module "vpc" {
 | <a name="input_vpc_name"></a> [vpc\_name](#input\_vpc\_name) | VPC name | `string` | `""` | no |
 | <a name="input_vpc_private_subnet_cidrs"></a> [vpc\_private\_subnet\_cidrs](#input\_vpc\_private\_subnet\_cidrs) | Not required! You can set custom private subnets | `list(string)` | `null` | no |
 | <a name="input_vpc_public_subnet_cidrs"></a> [vpc\_public\_subnet\_cidrs](#input\_vpc\_public\_subnet\_cidrs) | Not required! You can set custom public subnets | `list(string)` | `null` | no |
-
 
 ## Outputs
 
