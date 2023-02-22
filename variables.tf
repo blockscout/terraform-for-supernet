@@ -95,7 +95,7 @@ variable "blockscout_settings" {
     ws_address                    = string
   })
   default = {
-    blockscout_docker_image       = "blockscout/blockscout-polygon-supernets:5.1.0-prerelease-a367b128"
+    blockscout_docker_image       = "blockscout/blockscout-polygon-supernets:5.1.0-prerelease-26e4d6e4"
     postgres_host                 = "postgres"
     postgres_password             = "postgres"
     postgres_user                 = "postgres"
