@@ -85,25 +85,16 @@ variable "enabled_dns_hostnames" {
 variable "blockscout_settings" {
   description = "Settings of blockscout app"
   type = object({
-    postgres_password             = string
-    postgres_user                 = string
-    postgres_host                 = string
-    blockscout_docker_image       = string
-    rpc_address                   = string
-    chain_id                      = string
-    rust_verification_service_url = string
-    ws_address                    = string
+    postgres_password             = optional(string, "postgres")
+    postgres_user                 = optional(string, "postgres")
+    postgres_host                 = optional(string, "postgres")
+    blockscout_docker_image       = optional(string, "blockscout/blockscout-polygon-supernets:5.1.0-prerelease-26e4d6e4")
+    rpc_address                   = optional(string, "https://rpc-supertestnet.polygon.technology")
+    chain_id                      = optional(string, "93201")
+    rust_verification_service_url = optional(string, "https://sc-verifier.aws-k8s.blockscout.com/")
+    ws_address                    = optional(string, "")
   })
-  default = {
-    blockscout_docker_image       = "blockscout/blockscout-polygon-supernets:5.1.0-prerelease-26e4d6e4"
-    postgres_host                 = "postgres"
-    postgres_password             = "postgres"
-    postgres_user                 = "postgres"
-    rpc_address                   = "https://rpc-supertestnet.polygon.technology"
-    chain_id                      = "93201"
-    rust_verification_service_url = "https://sc-verifier.aws-k8s.blockscout.com/"
-    ws_address                    = ""
-  }
+  default = {}
 }
 
 variable "tags" {
@@ -199,21 +190,14 @@ variable "create_iam_instance_profile_ssm_policy" {
 variable "verifier_settings" {
   description = "Settings of verifier"
   type = object({
-    docker_image                       = string
-    solidity_fetcher_list_url          = string
-    solidity_refresh_versions_schedule = string
-    vyper_fetcher_list_url             = string
-    vyper_refresh_versions_schedule    = string
-    sourcify_api_url                   = string
+    docker_image                       = optional(string, "https://sc-verifier.aws-k8s.blockscout.com/")
+    solidity_fetcher_list_url          = optional(string, "https://solc-bin.ethereum.org/linux-amd64/list.json")
+    solidity_refresh_versions_schedule = optional(string, "0 0 * * * * *")
+    vyper_fetcher_list_url             = optional(string, "https://raw.githubusercontent.com/blockscout/solc-bin/main/vyper.list.json")
+    vyper_refresh_versions_schedule    = optional(string, "0 0 * * * * *")
+    sourcify_api_url                   = optional(string, "https://sourcify.dev/server/")
   })
-  default = {
-    docker_image                       = "ghcr.io/blockscout/smart-contract-verifier:main"
-    solidity_fetcher_list_url          = "https://solc-bin.ethereum.org/linux-amd64/list.json"
-    solidity_refresh_versions_schedule = "0 0 * * * * *"
-    vyper_refresh_versions_schedule    = "0 0 * * * * *"
-    vyper_fetcher_list_url             = "https://raw.githubusercontent.com/blockscout/solc-bin/main/vyper.list.json"
-    sourcify_api_url                   = "https://sourcify.dev/server/"
-  }
+  default = {}
 }
 
 variable "verifier_enabled" {
