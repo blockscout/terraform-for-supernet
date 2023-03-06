@@ -154,6 +154,12 @@ variable "ui_and_api_instance_type" {
   default     = "t2.medium"
 }
 
+variable "verifier_instance_type" {
+  description = "AWS instance type"
+  type        = string
+  default     = "t2.medium"
+}
+
 variable "rds_instance_type" {
   description = "AWS RDS instance type"
   type        = string
@@ -188,4 +194,30 @@ variable "create_iam_instance_profile_ssm_policy" {
   description = "Determines whether an IAM instance profile with SSM policy is created or to use an existing IAM instance profile"
   type        = string
   default     = false
+}
+
+variable "verifier_settings" {
+  description = "Settings of verifier"
+  type = object({
+    docker_image                       = string
+    solidity_fetcher_list_url          = string
+    solidity_refresh_versions_schedule = string
+    vyper_fetcher_list_url             = string
+    vyper_refresh_versions_schedule    = string
+    sourcify_api_url                   = string
+  })
+  default = {
+    docker_image                       = "ghcr.io/blockscout/smart-contract-verifier:main"
+    solidity_fetcher_list_url          = "https://solc-bin.ethereum.org/linux-amd64/list.json"
+    solidity_refresh_versions_schedule = "0 0 * * * * *"
+    vyper_refresh_versions_schedule    = "0 0 * * * * *"
+    vyper_fetcher_list_url             = "https://raw.githubusercontent.com/blockscout/solc-bin/main/vyper.list.json"
+    sourcify_api_url                   = "https://sourcify.dev/server/"
+  }
+}
+
+variable "verifier_enabled" {
+  description = "Verifier deploy"
+  type        = bool
+  default     = true
 }

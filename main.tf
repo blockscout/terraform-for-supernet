@@ -34,6 +34,57 @@ module "lb-sg" {
   tags = local.final_tags
 }
 
+module "lb-verifier-sg" {
+  source              = "terraform-aws-modules/security-group/aws"
+  version             = "4.16.0"
+  name                = "${var.vpc_name}-lb-sg"
+  description         = "SG for LB"
+  vpc_id              = var.existed_vpc_id == "" ? module.vpc[0].vpc_id : var.existed_vpc_id
+  ingress_cidr_blocks = [var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block]
+  ingress_rules       = ["http-80-tcp"]
+  egress_with_cidr_blocks = [
+    {
+      from_port   = 8050
+      to_port     = 8050
+      protocol    = "tcp"
+      description = "Verifier port"
+      cidr_blocks = var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
+    }
+  ]
+  tags = local.final_tags
+}
+
+module "verifier-sg" {
+  count              = var.verifier_enabled ? 1 : 0
+  source             = "terraform-aws-modules/security-group/aws"
+  version            = "4.16.0"
+  name               = "${var.vpc_name}-application-sg"
+  description        = "SG for instances of verifier"
+  vpc_id             = var.existed_vpc_id == "" ? module.vpc[0].vpc_id : var.existed_vpc_id
+  egress_cidr_blocks = ["0.0.0.0/0"] # internet access
+  egress_rules       = ["all-all"]   # internet access
+  ingress_with_cidr_blocks = [
+    {
+      from_port   = 8050
+      to_port     = 8050
+      protocol    = "tcp"
+      description = "Verifier port"
+      cidr_blocks = var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
+      self        = true
+    }
+  ]
+  ingress_with_source_security_group_id = [
+    {
+      from_port                = 8050
+      to_port                  = 8050
+      protocol                 = "tcp"
+      description              = "Verifier port"
+      source_security_group_id = module.lb-verifier-sg.security_group_id
+    }
+  ]
+  tags = local.final_tags
+}
+
 module "application-sg" {
   source             = "terraform-aws-modules/security-group/aws"
   version            = "4.16.0"
@@ -244,6 +295,92 @@ module "ec2_asg_indexer" {
   tags = local.final_tags
 }
 
+module "ec2_asg_verifier" {
+  source                    = "terraform-aws-modules/autoscaling/aws"
+  version                   = "v6.7.1"
+  name                      = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-verifier-instance"
+  min_size                  = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
+  max_size                  = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
+  wait_for_capacity_timeout = 0
+  health_check_type         = "EC2"
+  vpc_zone_identifier       = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
+  instance_refresh = {
+    strategy = "Rolling"
+    preferences = {
+      min_healthy_percentage = 100
+    }
+    triggers = ["tag"]
+  }
+  launch_template_name        = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-verifier-launch-template"
+  launch_template_description = "Launch template verifier"
+  update_default_version      = true
+  image_id                    = data.aws_ami.ubuntu.id
+  instance_type               = var.verifier_instance_type
+  ebs_optimized               = false
+  enable_monitoring           = false
+  create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
+  iam_instance_profile_arn    = var.iam_instance_profile_arn
+  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-verifier"
+  iam_role_path               = "/"
+  iam_role_description        = "IAM role for verifier instance"
+  iam_role_tags = {
+    CustomIamRole = "Yes"
+  }
+  iam_role_policies = {
+    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  }
+  user_data = base64encode(templatefile(
+    "${path.module}/templates/init_script.tftpl",
+    {
+      docker_compose_str = templatefile(
+        "${path.module}/templates/docker_compose_verifier.tftpl",
+        {
+          docker_image                       = var.verifier_settings["docker_image"]
+          solidity_fetcher_list_url          = var.verifier_settings["solidity_fetcher_list_url"]
+          solidity_refresh_versions_schedule = var.verifier_settings["solidity_refresh_versions_schedule"]
+          vyper_refresh_versions_schedule    = var.verifier_settings["vyper_refresh_versions_schedule"]
+          vyper_fetcher_list_url             = var.verifier_settings["vyper_fetcher_list_url"]
+          sourcify_api_url                   = var.verifier_settings["sourcify_api_url"]
+        }
+      )
+      path_docker_compose_files = var.path_docker_compose_files
+      user                      = var.user
+    }
+  ))
+  block_device_mappings = [
+    {
+      device_name = "/dev/xvda"
+      no_device   = 0
+      ebs = {
+        delete_on_termination = true
+        encrypted             = false
+        volume_size           = 30
+        volume_type           = "gp2"
+      }
+    }
+  ]
+  network_interfaces = [
+    {
+      delete_on_termination = true
+      description           = "eth0"
+      device_index          = 0
+      security_groups       = [module.verifier-sg[0].security_group_id]
+    }
+  ]
+  tag_specifications = [
+    {
+      resource_type = "instance"
+      tags          = local.final_tags
+    },
+    {
+      resource_type = "volume"
+      tags          = local.final_tags
+    }
+  ]
+  target_group_arns = module.alb-verifier.target_group_arns
+  tags              = local.final_tags
+}
+
 module "ec2_asg_api-and-ui" {
   source                    = "terraform-aws-modules/autoscaling/aws"
   version                   = "v6.7.1"
@@ -291,7 +428,7 @@ module "ec2_asg_api-and-ui" {
           ws_address                    = var.blockscout_settings["ws_address"]
           postgres_host                 = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
           chain_id                      = var.blockscout_settings["chain_id"]
-          rust_verification_service_url = var.blockscout_settings["rust_verification_service_url"]
+          rust_verification_service_url = var.verifier_enabled ? module.alb-verifier.lb_dns_name : var.blockscout_settings["rust_verification_service_url"]
           indexer                       = false
           api_and_ui                    = true
         }
@@ -337,7 +474,7 @@ module "ec2_asg_api-and-ui" {
 module "alb" {
   source             = "terraform-aws-modules/alb/aws"
   version            = "8.2.1"
-  name               = "supernet-test"
+  name               = "supernet"
   load_balancer_type = "application"
   vpc_id             = var.existed_vpc_id != "" ? var.existed_vpc_id : module.vpc[0].vpc_id
   subnets            = var.existed_vpc_id != "" ? var.existed_public_subnets_ids : module.vpc[0].public_subnets
@@ -375,5 +512,33 @@ module "alb" {
       certificate_arn    = var.ssl_certificate_arn
     }
   ] : []
+  tags = local.final_tags
+}
+
+module "alb-verifier" {
+  source             = "terraform-aws-modules/alb/aws"
+  version            = "8.2.1"
+  name               = "verifier"
+  internal           = true
+  load_balancer_type = "application"
+  vpc_id             = var.existed_vpc_id != "" ? var.existed_vpc_id : module.vpc[0].vpc_id
+  subnets            = var.existed_vpc_id != "" ? var.existed_public_subnets_ids : module.vpc[0].public_subnets
+  security_groups    = [module.lb-verifier-sg.security_group_id]
+  target_groups = [
+    {
+      name_prefix      = "verif-"
+      backend_protocol = "HTTP"
+      backend_port     = 8050
+      target_type      = "instance"
+    }
+  ]
+  http_tcp_listeners = [
+    {
+      port        = 80
+      protocol    = "HTTP"
+      action_type = "forward"
+      redirect    = {}
+    }
+  ]
   tags = local.final_tags
 }
