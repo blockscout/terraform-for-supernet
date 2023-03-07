@@ -85,25 +85,17 @@ variable "enabled_dns_hostnames" {
 variable "blockscout_settings" {
   description = "Settings of blockscout app"
   type = object({
-    postgres_password             = string
-    postgres_user                 = string
-    postgres_host                 = string
-    blockscout_docker_image       = string
-    rpc_address                   = string
-    chain_id                      = string
-    rust_verification_service_url = string
-    ws_address                    = string
+    postgres_password             = optional(string, "postgres")
+    postgres_user                 = optional(string, "postgres")
+    postgres_host                 = optional(string, "postgres")
+    blockscout_docker_image       = optional(string, "blockscout/blockscout-polygon-supernets:5.1.0-prerelease-26e4d6e4")
+    rpc_address                   = optional(string, "https://rpc-supertestnet.polygon.technology")
+    chain_id                      = optional(string, "93201")
+    rust_verification_service_url = optional(string, "https://sc-verifier.aws-k8s.blockscout.com/")
+    ws_address                    = optional(string, "")
+    visualize_sol2uml_service_url = optional(string, "")
   })
-  default = {
-    blockscout_docker_image       = "blockscout/blockscout-polygon-supernets:5.1.0-prerelease-26e4d6e4"
-    postgres_host                 = "postgres"
-    postgres_password             = "postgres"
-    postgres_user                 = "postgres"
-    rpc_address                   = "https://rpc-supertestnet.polygon.technology"
-    chain_id                      = "93201"
-    rust_verification_service_url = "https://sc-verifier.aws-k8s.blockscout.com/"
-    ws_address                    = ""
-  }
+  default = {}
 }
 
 variable "tags" {
@@ -154,6 +146,12 @@ variable "ui_and_api_instance_type" {
   default     = "t2.medium"
 }
 
+variable "verifier_instance_type" {
+  description = "AWS instance type"
+  type        = string
+  default     = "t2.medium"
+}
+
 variable "rds_instance_type" {
   description = "AWS RDS instance type"
   type        = string
@@ -188,4 +186,47 @@ variable "create_iam_instance_profile_ssm_policy" {
   description = "Determines whether an IAM instance profile with SSM policy is created or to use an existing IAM instance profile"
   type        = string
   default     = false
+}
+
+variable "verifier_settings" {
+  description = "Settings of verifier"
+  type = object({
+    docker_image                       = optional(string, "ghcr.io/blockscout/smart-contract-verifier:main")
+    solidity_fetcher_list_url          = optional(string, "https://solc-bin.ethereum.org/linux-amd64/list.json")
+    solidity_refresh_versions_schedule = optional(string, "0 0 * * * * *")
+    vyper_fetcher_list_url             = optional(string, "https://raw.githubusercontent.com/blockscout/solc-bin/main/vyper.list.json")
+    vyper_refresh_versions_schedule    = optional(string, "0 0 * * * * *")
+    sourcify_api_url                   = optional(string, "https://sourcify.dev/server/")
+  })
+  default = {}
+}
+
+variable "verifier_enabled" {
+  description = "Verifier deploy"
+  type        = bool
+  default     = true
+}
+
+variable "verifier_replicas" {
+  description = "Number of verifier replicas"
+  type        = number
+  default     = 2
+}
+
+variable "visualizer_enabled" {
+  description = "Visualizer deploy"
+  type        = bool
+  default     = true
+}
+
+variable "visualizer_replicas" {
+  description = "Number of visualizer replicas"
+  type        = number
+  default     = 2
+}
+
+variable "visualizer_docker_image" {
+  description = "Docker image of visualizer"
+  type        = string
+  default     = "ghcr.io/blockscout/visualizer:latest"
 }
