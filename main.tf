@@ -1,3 +1,8 @@
+resource "random_string" "secret_key_base" {
+  length  = 64
+  special = false
+}
+
 module "vpc" {
   source               = "terraform-aws-modules/vpc/aws"
   version              = "3.18.1"
@@ -34,7 +39,7 @@ module "lb-sg" {
   tags = local.final_tags
 }
 
-module "lb-verifier-sg" {
+module "lb-microservices-sg" {
   source              = "terraform-aws-modules/security-group/aws"
   version             = "4.16.0"
   name                = "${var.vpc_name}-lb-sg"
@@ -47,15 +52,14 @@ module "lb-verifier-sg" {
       from_port   = 8050
       to_port     = 8050
       protocol    = "tcp"
-      description = "Verifier port"
+      description = "Microservices port"
       cidr_blocks = var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
     }
   ]
   tags = local.final_tags
 }
 
-module "verifier-sg" {
-  count              = var.verifier_enabled ? 1 : 0
+module "microservices-sg" {
   source             = "terraform-aws-modules/security-group/aws"
   version            = "4.16.0"
   name               = "${var.vpc_name}-application-sg"
@@ -68,7 +72,7 @@ module "verifier-sg" {
       from_port   = 8050
       to_port     = 8050
       protocol    = "tcp"
-      description = "Verifier port"
+      description = "Microservices port"
       cidr_blocks = var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
       self        = true
     }
@@ -78,8 +82,8 @@ module "verifier-sg" {
       from_port                = 8050
       to_port                  = 8050
       protocol                 = "tcp"
-      description              = "Verifier port"
-      source_security_group_id = module.lb-verifier-sg.security_group_id
+      description              = "Microservices port"
+      source_security_group_id = module.lb-microservices-sg.security_group_id
     }
   ]
   tags = local.final_tags
@@ -207,338 +211,179 @@ module "ec2_database" {
 }
 
 module "ec2_asg_indexer" {
-  source                    = "terraform-aws-modules/autoscaling/aws"
-  version                   = "v6.7.1"
-  name                      = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-indexer-instance"
-  min_size                  = 1
-  max_size                  = 1
-  wait_for_capacity_timeout = 0
-  health_check_type         = "EC2"
-  vpc_zone_identifier       = var.existed_vpc_id != "" ? slice(var.existed_private_subnets_ids, 0, 1) : slice(module.vpc[0].private_subnets, 0, 1)
-  instance_refresh = {
-    strategy = "Rolling"
-    preferences = {
-      min_healthy_percentage = 100
-    }
-    triggers = ["tag"]
-  }
-  launch_template_name        = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-indexer-launch-template"
-  launch_template_description = "Launch template indexer"
-  update_default_version      = true
+  source = "./asg"
+  ## ASG settings
+  name                 = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-indexer-instance"
+  min_size             = 1
+  max_size             = 1
+  vpc_zone_identifier  = var.existed_vpc_id != "" ? slice(var.existed_private_subnets_ids, 0, 1) : slice(module.vpc[0].private_subnets, 0, 1)
+  launch_template_name = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-indexer-launch-template"
+  target_group_arns    = []
+  ## Instance settings
   image_id                    = data.aws_ami.ubuntu.id
   instance_type               = var.ui_and_api_instance_type
-  ebs_optimized               = false
-  enable_monitoring           = false
   create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
   iam_instance_profile_arn    = var.iam_instance_profile_arn
-  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-indexer"
-  iam_role_path               = "/"
-  iam_role_description        = "IAM role for indexer instance"
-  iam_role_tags = {
-    CustomIamRole = "Yes"
+  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-api-and-ui"
+  ## Init settings
+  path_docker_compose_files = var.path_docker_compose_files
+  user                      = var.user
+  security_groups           = module.application-sg.security_group_id
+  docker_compose_config = {
+    postgres_password             = var.deploy_rds_db ? module.rds[0].db_instance_password : var.blockscout_settings["postgres_password"]
+    postgres_user                 = var.deploy_rds_db ? module.rds[0].db_instance_username : var.blockscout_settings["postgres_user"]
+    blockscout_docker_image       = var.blockscout_settings["blockscout_docker_image"]
+    rpc_address                   = var.blockscout_settings["rpc_address"]
+    ws_address                    = var.blockscout_settings["ws_address"]
+    postgres_host                 = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
+    chain_id                      = var.blockscout_settings["chain_id"]
+    rust_verification_service_url = var.blockscout_settings["rust_verification_service_url"]
+    secret_key_base               = random_string.secret_key_base.result
+    visualize_sol2uml_enabled     = false
+    visualize_sol2uml_service_url = var.visualize_sol2uml_enabled ? module.alb-visualizer.lb_dns_name : var.blockscout_settings["visualize_sol2uml_service_url"]
+    indexer                       = true
+    api_and_ui                    = false
   }
-  iam_role_policies = {
-    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  tags = local.final_tags
+}
+
+module "ec2_asg_api-and-ui" {
+  source = "./asg"
+  ## ASG settings
+  name                 = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-api-and-ui-instances"
+  min_size             = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
+  max_size             = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
+  vpc_zone_identifier  = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
+  launch_template_name = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-api-and-ui-launch-template"
+  target_group_arns    = module.alb.target_group_arns
+  ## Instance settings
+  image_id                    = data.aws_ami.ubuntu.id
+  instance_type               = var.ui_and_api_instance_type
+  create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
+  iam_instance_profile_arn    = var.iam_instance_profile_arn
+  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-api-and-ui"
+  ## Init settings
+  path_docker_compose_files = var.path_docker_compose_files
+  user                      = var.user
+  security_groups           = module.application-sg.security_group_id
+  docker_compose_config = {
+    postgres_password             = var.deploy_rds_db ? module.rds[0].db_instance_password : var.blockscout_settings["postgres_password"]
+    postgres_user                 = var.deploy_rds_db ? module.rds[0].db_instance_username : var.blockscout_settings["postgres_user"]
+    blockscout_docker_image       = var.blockscout_settings["blockscout_docker_image"]
+    rpc_address                   = var.blockscout_settings["rpc_address"]
+    ws_address                    = var.blockscout_settings["ws_address"]
+    postgres_host                 = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
+    chain_id                      = var.blockscout_settings["chain_id"]
+    rust_verification_service_url = var.verifier_enabled ? module.alb-verifier.lb_dns_name : var.blockscout_settings["rust_verification_service_url"]
+    secret_key_base               = random_string.secret_key_base.result
+    visualize_sol2uml_enabled     = var.visualize_sol2uml_enabled
+    visualize_sol2uml_service_url = var.visualize_sol2uml_enabled ? module.alb-visualizer.lb_dns_name : var.blockscout_settings["visualize_sol2uml_service_url"]
+    indexer                       = false
+    api_and_ui                    = true
   }
-  user_data = base64encode(templatefile(
-    "${path.module}/templates/init_script.tftpl",
-    {
-      docker_compose_str = templatefile(
-        "${path.module}/templates/docker_compose.tftpl",
-        {
-          postgres_password             = var.deploy_rds_db ? module.rds[0].db_instance_password : var.blockscout_settings["postgres_password"]
-          postgres_user                 = var.deploy_rds_db ? module.rds[0].db_instance_username : var.blockscout_settings["postgres_user"]
-          blockscout_docker_image       = var.blockscout_settings["blockscout_docker_image"]
-          rpc_address                   = var.blockscout_settings["rpc_address"]
-          ws_address                    = var.blockscout_settings["ws_address"]
-          postgres_host                 = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
-          chain_id                      = var.blockscout_settings["chain_id"]
-          rust_verification_service_url = var.blockscout_settings["rust_verification_service_url"]
-          indexer                       = true
-          api_and_ui                    = false
-        }
-      )
-      path_docker_compose_files = var.path_docker_compose_files
-      user                      = var.user
-    }
-  ))
-  block_device_mappings = [
-    {
-      device_name = "/dev/xvda"
-      no_device   = 0
-      ebs = {
-        delete_on_termination = true
-        encrypted             = false
-        volume_size           = 30
-        volume_type           = "gp2"
-      }
-    }
-  ]
-  network_interfaces = [
-    {
-      delete_on_termination = true
-      description           = "eth0"
-      device_index          = 0
-      security_groups       = [module.application-sg.security_group_id]
-    }
-  ]
-  tag_specifications = [
-    {
-      resource_type = "instance"
-      tags          = local.final_tags
-    },
-    {
-      resource_type = "volume"
-      tags          = local.final_tags
-    }
-  ]
   tags = local.final_tags
 }
 
 module "ec2_asg_verifier" {
-  source                    = "terraform-aws-modules/autoscaling/aws"
-  version                   = "v6.7.1"
-  name                      = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-verifier-instance"
-  min_size                  = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
-  max_size                  = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
-  wait_for_capacity_timeout = 0
-  health_check_type         = "EC2"
-  vpc_zone_identifier       = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
-  instance_refresh = {
-    strategy = "Rolling"
-    preferences = {
-      min_healthy_percentage = 100
-    }
-    triggers = ["tag"]
-  }
-  launch_template_name        = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-verifier-launch-template"
-  launch_template_description = "Launch template verifier"
-  update_default_version      = true
+  count  = var.verifier_enabled ? 1 : 0
+  source = "./asg"
+  ## ASG settings
+  name                 = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-verifier-instance"
+  min_size             = var.verifier_replicas
+  max_size             = var.verifier_replicas
+  vpc_zone_identifier  = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
+  launch_template_name = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-verifier-launch-template"
+  target_group_arns    = module.alb-verifier.target_group_arns
+  ## Instance settings
   image_id                    = data.aws_ami.ubuntu.id
   instance_type               = var.verifier_instance_type
-  ebs_optimized               = false
-  enable_monitoring           = false
   create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
   iam_instance_profile_arn    = var.iam_instance_profile_arn
   iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-verifier"
-  iam_role_path               = "/"
-  iam_role_description        = "IAM role for verifier instance"
-  iam_role_tags = {
-    CustomIamRole = "Yes"
+  ## Init settings
+  docker_compose_file_postfix = "_verifier"
+  path_docker_compose_files   = var.path_docker_compose_files
+  user                        = var.user
+  security_groups             = module.microservices-sg.security_group_id
+  docker_compose_config = {
+    docker_image                       = var.verifier_settings["docker_image"]
+    solidity_fetcher_list_url          = var.verifier_settings["solidity_fetcher_list_url"]
+    solidity_refresh_versions_schedule = var.verifier_settings["solidity_refresh_versions_schedule"]
+    vyper_refresh_versions_schedule    = var.verifier_settings["vyper_refresh_versions_schedule"]
+    vyper_fetcher_list_url             = var.verifier_settings["vyper_fetcher_list_url"]
+    sourcify_api_url                   = var.verifier_settings["sourcify_api_url"]
   }
-  iam_role_policies = {
-    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  }
-  user_data = base64encode(templatefile(
-    "${path.module}/templates/init_script.tftpl",
-    {
-      docker_compose_str = templatefile(
-        "${path.module}/templates/docker_compose_verifier.tftpl",
-        {
-          docker_image                       = var.verifier_settings["docker_image"]
-          solidity_fetcher_list_url          = var.verifier_settings["solidity_fetcher_list_url"]
-          solidity_refresh_versions_schedule = var.verifier_settings["solidity_refresh_versions_schedule"]
-          vyper_refresh_versions_schedule    = var.verifier_settings["vyper_refresh_versions_schedule"]
-          vyper_fetcher_list_url             = var.verifier_settings["vyper_fetcher_list_url"]
-          sourcify_api_url                   = var.verifier_settings["sourcify_api_url"]
-        }
-      )
-      path_docker_compose_files = var.path_docker_compose_files
-      user                      = var.user
-    }
-  ))
-  block_device_mappings = [
-    {
-      device_name = "/dev/xvda"
-      no_device   = 0
-      ebs = {
-        delete_on_termination = true
-        encrypted             = false
-        volume_size           = 30
-        volume_type           = "gp2"
-      }
-    }
-  ]
-  network_interfaces = [
-    {
-      delete_on_termination = true
-      description           = "eth0"
-      device_index          = 0
-      security_groups       = [module.verifier-sg[0].security_group_id]
-    }
-  ]
-  tag_specifications = [
-    {
-      resource_type = "instance"
-      tags          = local.final_tags
-    },
-    {
-      resource_type = "volume"
-      tags          = local.final_tags
-    }
-  ]
-  target_group_arns = module.alb-verifier.target_group_arns
-  tags              = local.final_tags
+  tags = local.final_tags
 }
 
-module "ec2_asg_api-and-ui" {
-  source                    = "terraform-aws-modules/autoscaling/aws"
-  version                   = "v6.7.1"
-  name                      = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-api-and-ui-instances"
-  min_size                  = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
-  max_size                  = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
-  wait_for_capacity_timeout = 0
-  health_check_type         = "EC2"
-  vpc_zone_identifier       = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
-  instance_refresh = {
-    strategy = "Rolling"
-    preferences = {
-      min_healthy_percentage = 100
-    }
-    triggers = ["tag"]
-  }
-  launch_template_name        = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-api-and-ui-launch-template"
-  launch_template_description = "Launch template api-and-ui"
-  update_default_version      = true
+module "ec2_asg_visualizer" {
+  count  = var.visualizer_enabled ? 1 : 0
+  source = "./asg"
+  ## ASG settings
+  name                 = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-visualizer-instance"
+  min_size             = var.visualizer_replicas
+  max_size             = var.visualizer_replicas
+  vpc_zone_identifier  = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
+  launch_template_name = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-verifier-launch-template"
+  target_group_arns    = module.alb-visualizer.target_group_arns
+  ## Instance settings
   image_id                    = data.aws_ami.ubuntu.id
-  instance_type               = var.ui_and_api_instance_type
-  ebs_optimized               = false
-  enable_monitoring           = false
+  instance_type               = var.verifier_instance_type
   create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
   iam_instance_profile_arn    = var.iam_instance_profile_arn
-  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-api-and-ui"
-  iam_role_path               = "/"
-  iam_role_description        = "IAM role for api-and-ui-instances"
-  iam_role_tags = {
-    CustomIamRole = "Yes"
+  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-verifier"
+  ## Init settings
+  docker_compose_file_postfix = "_visualizer"
+  path_docker_compose_files   = var.path_docker_compose_files
+  user                        = var.user
+  security_groups             = module.microservices-sg.security_group_id
+  docker_compose_config = {
+    docker_image                       = var.verifier_settings["docker_image"]
+    solidity_fetcher_list_url          = var.verifier_settings["solidity_fetcher_list_url"]
+    solidity_refresh_versions_schedule = var.verifier_settings["solidity_refresh_versions_schedule"]
+    vyper_refresh_versions_schedule    = var.verifier_settings["vyper_refresh_versions_schedule"]
+    vyper_fetcher_list_url             = var.verifier_settings["vyper_fetcher_list_url"]
+    sourcify_api_url                   = var.verifier_settings["sourcify_api_url"]
   }
-  iam_role_policies = {
-    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  }
-  user_data = base64encode(templatefile(
-    "${path.module}/templates/init_script.tftpl",
-    {
-      docker_compose_str = templatefile(
-        "${path.module}/templates/docker_compose.tftpl",
-        {
-          postgres_password             = var.deploy_rds_db ? module.rds[0].db_instance_password : var.blockscout_settings["postgres_password"]
-          postgres_user                 = var.deploy_rds_db ? module.rds[0].db_instance_username : var.blockscout_settings["postgres_user"]
-          blockscout_docker_image       = var.blockscout_settings["blockscout_docker_image"]
-          rpc_address                   = var.blockscout_settings["rpc_address"]
-          ws_address                    = var.blockscout_settings["ws_address"]
-          postgres_host                 = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
-          chain_id                      = var.blockscout_settings["chain_id"]
-          rust_verification_service_url = var.verifier_enabled ? module.alb-verifier.lb_dns_name : var.blockscout_settings["rust_verification_service_url"]
-          indexer                       = false
-          api_and_ui                    = true
-        }
-      )
-      path_docker_compose_files = var.path_docker_compose_files
-      user                      = var.user
-    }
-  ))
-  block_device_mappings = [
-    {
-      device_name = "/dev/xvda"
-      no_device   = 0
-      ebs = {
-        delete_on_termination = true
-        encrypted             = false
-        volume_size           = 30
-        volume_type           = "gp2"
-      }
-    }
-  ]
-  network_interfaces = [
-    {
-      delete_on_termination = true
-      description           = "eth0"
-      device_index          = 0
-      security_groups       = [module.application-sg.security_group_id]
-    }
-  ]
-  tag_specifications = [
-    {
-      resource_type = "instance"
-      tags          = local.final_tags
-    },
-    {
-      resource_type = "volume"
-      tags          = local.final_tags
-    }
-  ]
-  target_group_arns = module.alb.target_group_arns
-  tags              = local.final_tags
+  tags = local.final_tags
 }
 
 module "alb" {
-  source             = "terraform-aws-modules/alb/aws"
-  version            = "8.2.1"
-  name               = "supernet"
-  load_balancer_type = "application"
-  vpc_id             = var.existed_vpc_id != "" ? var.existed_vpc_id : module.vpc[0].vpc_id
-  subnets            = var.existed_vpc_id != "" ? var.existed_public_subnets_ids : module.vpc[0].public_subnets
-  security_groups    = [module.lb-sg.security_group_id]
-  target_groups = [
-    {
-      name_prefix      = "apiui-"
-      backend_protocol = "HTTP"
-      backend_port     = 4000
-      target_type      = "instance"
-    }
-  ]
-  http_tcp_listeners = var.ssl_certificate_arn != "" ? [
-    {
-      port        = 80
-      protocol    = "HTTP"
-      action_type = "redirect"
-      redirect = {
-        port        = "443"
-        protocol    = "HTTPS"
-        status_code = "HTTP_301"
-      }
-    }] : [
-    {
-      port        = 80
-      protocol    = "HTTP"
-      action_type = "forward"
-      redirect    = {}
-  }]
-  https_listeners = var.ssl_certificate_arn != "" ? [
-    {
-      port               = 443
-      protocol           = "HTTPS"
-      target_group_index = 0
-      certificate_arn    = var.ssl_certificate_arn
-    }
-  ] : []
-  tags = local.final_tags
+  source              = "./alb"
+  name                = "supernet"
+  internal            = false
+  vpc_id              = local.vpc_id_rule
+  subnets             = local.subnets_rule
+  backend_port        = 4000
+  health_check_path   = "/"
+  name_prefix         = "apiui-"
+  security_groups     = module.lb-sg.security_group_id
+  ssl_certificate_arn = var.ssl_certificate_arn
+  tags                = local.final_tags
 }
 
 module "alb-verifier" {
-  source             = "terraform-aws-modules/alb/aws"
-  version            = "8.2.1"
-  name               = "verifier"
-  internal           = true
-  load_balancer_type = "application"
-  vpc_id             = var.existed_vpc_id != "" ? var.existed_vpc_id : module.vpc[0].vpc_id
-  subnets            = var.existed_vpc_id != "" ? var.existed_public_subnets_ids : module.vpc[0].public_subnets
-  security_groups    = [module.lb-verifier-sg.security_group_id]
-  target_groups = [
-    {
-      name_prefix      = "verif-"
-      backend_protocol = "HTTP"
-      backend_port     = 8050
-      target_type      = "instance"
-    }
-  ]
-  http_tcp_listeners = [
-    {
-      port        = 80
-      protocol    = "HTTP"
-      action_type = "forward"
-      redirect    = {}
-    }
-  ]
-  tags = local.final_tags
+  source            = "./alb"
+  name              = "verifier"
+  internal          = true
+  vpc_id            = local.vpc_id_rule
+  subnets           = local.subnets_rule
+  backend_port      = 8050
+  health_check_path = "/api/v2/verifier/solidity/versions"
+  name_prefix       = "verif-"
+  security_groups   = module.lb-microservices-sg.security_group_id
+  tags              = local.final_tags
+}
+
+module "alb-visualizer" {
+  source            = "./alb"
+  name              = "visualizer"
+  internal          = true
+  vpc_id            = local.vpc_id_rule
+  subnets           = local.subnets_rule
+  backend_port      = 8050
+  health_check_path = "/"
+  name_prefix       = "viz-"
+  security_groups   = module.lb-microservices-sg.security_group_id
+  tags              = local.final_tags
 }

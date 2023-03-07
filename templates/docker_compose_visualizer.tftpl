@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  visualizer:
+    container_name: 'visualizer'
+    image: ${docker_image}
+    restart: always
+    environment:
+      VISUALIZER__SERVER__GRPC__ENABLED: "false"
+    ports:
+      - 8050:8050
+    volumes:
+      - ./logs/:/app/logs/

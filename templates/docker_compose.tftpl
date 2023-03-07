@@ -18,6 +18,11 @@ services:
 %{ endif ~}
 %{ if api_and_ui ~}
       DISABLE_INDEXER: "true"
+      SECRET_KEY_BASE: '${secret_key_base}'
+%{ if visualize_sol2uml_enabled ~}
+      VISUALIZE_SOL2UML_ENABLED: "true"
+      VISUALIZE_SOL2UML_SERVICE_URL: '${visualize_sol2uml_service_url}'
+%{ endif ~}
 %{ endif ~}
 %{ if indexer ~}
       DISABLE_WEBAPP: "true"

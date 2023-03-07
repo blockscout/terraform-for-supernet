@@ -93,6 +93,7 @@ variable "blockscout_settings" {
     chain_id                      = optional(string, "93201")
     rust_verification_service_url = optional(string, "https://sc-verifier.aws-k8s.blockscout.com/")
     ws_address                    = optional(string, "")
+    visualize_sol2uml_service_url = optional(string, "")
   })
   default = {}
 }
@@ -190,7 +191,7 @@ variable "create_iam_instance_profile_ssm_policy" {
 variable "verifier_settings" {
   description = "Settings of verifier"
   type = object({
-    docker_image                       = optional(string, "https://sc-verifier.aws-k8s.blockscout.com/")
+    docker_image                       = optional(string, "ghcr.io/blockscout/smart-contract-verifier:main")
     solidity_fetcher_list_url          = optional(string, "https://solc-bin.ethereum.org/linux-amd64/list.json")
     solidity_refresh_versions_schedule = optional(string, "0 0 * * * * *")
     vyper_fetcher_list_url             = optional(string, "https://raw.githubusercontent.com/blockscout/solc-bin/main/vyper.list.json")
@@ -204,4 +205,28 @@ variable "verifier_enabled" {
   description = "Verifier deploy"
   type        = bool
   default     = true
+}
+
+variable "visualize_sol2uml_enabled" {
+  description = "Visualizer deploy"
+  type        = bool
+  default     = true
+}
+
+variable "verifier_replicas" {
+  description = "Number of verifier replicas"
+  type        = number
+  default     = 2
+}
+
+variable "visualizer_enabled" {
+  description = "Visualizer deploy"
+  type        = bool
+  default     = true
+}
+
+variable "visualizer_replicas" {
+  description = "Number of visualizer replicas"
+  type        = number
+  default     = 2
 }
