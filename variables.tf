@@ -207,12 +207,6 @@ variable "verifier_enabled" {
   default     = true
 }
 
-variable "visualize_sol2uml_enabled" {
-  description = "Visualizer deploy"
-  type        = bool
-  default     = true
-}
-
 variable "verifier_replicas" {
   description = "Number of verifier replicas"
   type        = number

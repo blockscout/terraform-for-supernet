@@ -239,8 +239,8 @@ module "ec2_asg_indexer" {
     chain_id                      = var.blockscout_settings["chain_id"]
     rust_verification_service_url = var.blockscout_settings["rust_verification_service_url"]
     secret_key_base               = random_string.secret_key_base.result
-    visualize_sol2uml_enabled     = false
-    visualize_sol2uml_service_url = var.visualize_sol2uml_enabled ? module.alb-visualizer.lb_dns_name : var.blockscout_settings["visualize_sol2uml_service_url"]
+    visualizer_enabled            = false
+    visualize_sol2uml_service_url = var.visualizer_enabled ? module.alb-visualizer[0].lb_dns_name : var.blockscout_settings["visualize_sol2uml_service_url"]
     indexer                       = true
     api_and_ui                    = false
   }
@@ -274,10 +274,10 @@ module "ec2_asg_api-and-ui" {
     ws_address                    = var.blockscout_settings["ws_address"]
     postgres_host                 = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
     chain_id                      = var.blockscout_settings["chain_id"]
-    rust_verification_service_url = var.verifier_enabled ? module.alb-verifier.lb_dns_name : var.blockscout_settings["rust_verification_service_url"]
+    rust_verification_service_url = var.verifier_enabled ? module.alb-verifier[0].lb_dns_name : var.blockscout_settings["rust_verification_service_url"]
     secret_key_base               = random_string.secret_key_base.result
-    visualize_sol2uml_enabled     = var.visualize_sol2uml_enabled
-    visualize_sol2uml_service_url = var.visualize_sol2uml_enabled ? module.alb-visualizer.lb_dns_name : var.blockscout_settings["visualize_sol2uml_service_url"]
+    visualizer_enabled            = var.visualizer_enabled
+    visualize_sol2uml_service_url = var.visualizer_enabled ? module.alb-visualizer[0].lb_dns_name : var.blockscout_settings["visualize_sol2uml_service_url"]
     indexer                       = false
     api_and_ui                    = true
   }
@@ -293,7 +293,7 @@ module "ec2_asg_verifier" {
   max_size             = var.verifier_replicas
   vpc_zone_identifier  = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
   launch_template_name = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-verifier-launch-template"
-  target_group_arns    = module.alb-verifier.target_group_arns
+  target_group_arns    = module.alb-verifier[0].target_group_arns
   ## Instance settings
   image_id                    = data.aws_ami.ubuntu.id
   instance_type               = var.verifier_instance_type
@@ -325,7 +325,7 @@ module "ec2_asg_visualizer" {
   max_size             = var.visualizer_replicas
   vpc_zone_identifier  = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
   launch_template_name = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-verifier-launch-template"
-  target_group_arns    = module.alb-visualizer.target_group_arns
+  target_group_arns    = module.alb-visualizer[0].target_group_arns
   ## Instance settings
   image_id                    = data.aws_ami.ubuntu.id
   instance_type               = var.verifier_instance_type
@@ -363,6 +363,7 @@ module "alb" {
 }
 
 module "alb-verifier" {
+  count             = var.verifier_enabled ? 1 : 0
   source            = "./alb"
   name              = "verifier"
   internal          = true
@@ -376,6 +377,7 @@ module "alb-verifier" {
 }
 
 module "alb-visualizer" {
+  count             = var.visualizer_enabled ? 1 : 0
   source            = "./alb"
   name              = "visualizer"
   internal          = true
