@@ -224,3 +224,9 @@ variable "visualizer_replicas" {
   type        = number
   default     = 2
 }
+
+variable "visualizer_docker_image" {
+  description = "Docker image of visualizer"
+  type        = string
+  default     = "ghcr.io/blockscout/visualizer:latest"
+}

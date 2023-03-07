@@ -112,6 +112,8 @@ module "vpc" {
 | <a name="input_vpc_name"></a> [vpc\_name](#input\_vpc\_name) | VPC name | `string` | `""` | no |
 | <a name="input_vpc_private_subnet_cidrs"></a> [vpc\_private\_subnet\_cidrs](#input\_vpc\_private\_subnet\_cidrs) | Not required! You can set custom private subnets | `list(string)` | `null` | no |
 | <a name="input_vpc_public_subnet_cidrs"></a> [vpc\_public\_subnet\_cidrs](#input\_vpc\_public\_subnet\_cidrs) | Not required! You can set custom public subnets | `list(string)` | `null` | no |
+| <a name="input_visualizer_docker_image"></a> [visualizer\_docker\_image](#input\_visualizer\_docker\_image) | Docker image of visualizer | `string` | `"ghcr.io/blockscout/visualizer:latest"` | no |
+
 
 
 ## Outputs

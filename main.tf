@@ -338,12 +338,7 @@ module "ec2_asg_visualizer" {
   user                        = var.user
   security_groups             = module.microservices-sg.security_group_id
   docker_compose_config = {
-    docker_image                       = var.verifier_settings["docker_image"]
-    solidity_fetcher_list_url          = var.verifier_settings["solidity_fetcher_list_url"]
-    solidity_refresh_versions_schedule = var.verifier_settings["solidity_refresh_versions_schedule"]
-    vyper_refresh_versions_schedule    = var.verifier_settings["vyper_refresh_versions_schedule"]
-    vyper_fetcher_list_url             = var.verifier_settings["vyper_fetcher_list_url"]
-    sourcify_api_url                   = var.verifier_settings["sourcify_api_url"]
+    docker_image = var.visualizer_docker_image
   }
   tags = local.final_tags
 }
@@ -384,7 +379,7 @@ module "alb-visualizer" {
   vpc_id            = local.vpc_id_rule
   subnets           = local.subnets_rule
   backend_port      = 8050
-  health_check_path = "/"
+  health_check_path = "/health"
   name_prefix       = "viz-"
   security_groups   = module.lb-microservices-sg.security_group_id
   tags              = local.final_tags
