@@ -188,22 +188,22 @@ variable "verifier_settings" {
 }
 
 ## Sig-provider settings
-variable "sig-provider_enabled" {
+variable "sig_provider_enabled" {
   description = "sig-provider deploy"
   type        = bool
   default     = false
 }
-variable "sig-provider_instance_type" {
+variable "sig_provider_instance_type" {
   description = "AWS instance type"
   type        = string
   default     = "t2.medium"
 }
-variable "sig-provider_docker_image" {
+variable "sig_provider_docker_image" {
   description = "Docker image of sig-provider"
   type        = string
   default     = "ghcr.io/blockscout/sig-provider:main"
 }
-variable "sig-provider_replicas" {
+variable "sig_provider_replicas" {
   description = "Number of sig-provider replicas"
   type        = number
   default     = 1
@@ -254,22 +254,22 @@ variable "stats_docker_image" {
 }
 
 ## eth-bytecode-db settings
-variable "eth-bytecode-db_enabled" {
+variable "eth_bytecode_db_enabled" {
   description = "eth-bytecode-db deploy"
   type        = bool
   default     = true
 }
-variable "eth-bytecode-db_instance_type" {
+variable "eth_bytecode_db_instance_type" {
   description = "AWS instance type"
   type        = string
   default     = "t2.medium"
 }
-variable "eth-bytecode-db_replicas" {
+variable "eth_bytecode_db_replicas" {
   description = "Number of eth-bytecode-db replicas"
   type        = number
   default     = 1
 }
-variable "eth-bytecode-db_docker_image" {
+variable "eth_bytecode_db_docker_image" {
   description = "Docker image of eth-bytecode-db"
   type        = string
   default     = "ghcr.io/blockscout/eth-bytecode-db:main"

@@ -23,7 +23,7 @@ services:
       VISUALIZE_SOL2UML_ENABLED: "true"
       VISUALIZE_SOL2UML_SERVICE_URL: '${visualize_sol2uml_service_url}'
 %{ endif ~}
-%{ if sig-provider_enabled ~}
+%{ if sig_provider_enabled ~}
       SIG_PROVIDER_ENABLED: "true"
       SIG_PROVIDER_SERVICE_URL: '${sig_provider_service_url}'
 %{ endif ~}

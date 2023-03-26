@@ -1,3 +1,4 @@
+<!-- BEGIN_TF_DOCS -->
 # Module for deploy blockscout to AWS
 Examples:   
 New vpc and deploy database rds:
@@ -37,36 +38,54 @@ module "vpc" {
   ssl_certificate_arn = "<arn>"
 }
 ```
+
 ## Requirements
 
-| Name | Version  |
-|------|----------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ">= 1.3.0" |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ">= 4.39.0" |
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.39.0 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | 3.4.3 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ">= 4.39" |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.39.0 |
+| <a name="provider_random"></a> [random](#provider\_random) | 3.4.3 |
 
 ## Modules
 
-| Name     | Source                                                                | Version |
-|----------|-----------------------------------------------------------------------|---------|
-| VPC      | https://github.com/terraform-aws-modules/terraform-aws-vpc            | 3.18.1  |
-| SG       | https://github.com/terraform-aws-modules/terraform-aws-security-group | 4.16.0  |
-| Key pair | https://github.com/terraform-aws-modules/terraform-aws-key-pair       | n/a     |
-| RDS      | https://github.com/terraform-aws-modules/terraform-aws-rds            | 5.1.1   |
-| EC2      | https://github.com/terraform-aws-modules/terraform-aws-ec2-instance   | 4.2.1   |
-| ALB      | https://github.com/terraform-aws-modules/terraform-aws-alb            | 8.2.1   |
-| ASG      | https://github.com/terraform-aws-modules/terraform-aws-autoscaling    | v6.7.1  |
-
+| Name | Source | Version |
+|------|--------|---------|
+| <a name="module_alb"></a> [alb](#module\_alb) | ./alb | n/a |
+| <a name="module_alb_eth_bytecode_db"></a> [alb\_eth\_bytecode\_db](#module\_alb\_eth\_bytecode\_db) | ./alb | n/a |
+| <a name="module_alb_sig_provider"></a> [alb\_sig\_provider](#module\_alb\_sig\_provider) | ./alb | n/a |
+| <a name="module_alb_stats"></a> [alb\_stats](#module\_alb\_stats) | ./alb | n/a |
+| <a name="module_alb_verifier"></a> [alb\_verifier](#module\_alb\_verifier) | ./alb | n/a |
+| <a name="module_alb_visualizer"></a> [alb\_visualizer](#module\_alb\_visualizer) | ./alb | n/a |
+| <a name="module_application_sg"></a> [application\_sg](#module\_application\_sg) | terraform-aws-modules/security-group/aws | 4.16.0 |
+| <a name="module_db_sg"></a> [db\_sg](#module\_db\_sg) | terraform-aws-modules/security-group/aws | 4.16.0 |
+| <a name="module_ec2_asg_api_and_ui"></a> [ec2\_asg\_api\_and\_ui](#module\_ec2\_asg\_api\_and\_ui) | ./asg | n/a |
+| <a name="module_ec2_asg_eth_bytecode_db"></a> [ec2\_asg\_eth\_bytecode\_db](#module\_ec2\_asg\_eth\_bytecode\_db) | ./asg | n/a |
+| <a name="module_ec2_asg_indexer"></a> [ec2\_asg\_indexer](#module\_ec2\_asg\_indexer) | ./asg | n/a |
+| <a name="module_ec2_asg_sig_provider"></a> [ec2\_asg\_sig\_provider](#module\_ec2\_asg\_sig\_provider) | ./asg | n/a |
+| <a name="module_ec2_asg_stats"></a> [ec2\_asg\_stats](#module\_ec2\_asg\_stats) | ./asg | n/a |
+| <a name="module_ec2_asg_verifier"></a> [ec2\_asg\_verifier](#module\_ec2\_asg\_verifier) | ./asg | n/a |
+| <a name="module_ec2_asg_visualizer"></a> [ec2\_asg\_visualizer](#module\_ec2\_asg\_visualizer) | ./asg | n/a |
+| <a name="module_ec2_database"></a> [ec2\_database](#module\_ec2\_database) | terraform-aws-modules/ec2-instance/aws | 4.2.1 |
+| <a name="module_key_pair"></a> [key\_pair](#module\_key\_pair) | terraform-aws-modules/key-pair/aws | 2.0.1 |
+| <a name="module_lb_microservices_sg"></a> [lb\_microservices\_sg](#module\_lb\_microservices\_sg) | terraform-aws-modules/security-group/aws | 4.16.0 |
+| <a name="module_lb_sg"></a> [lb\_sg](#module\_lb\_sg) | terraform-aws-modules/security-group/aws | 4.16.0 |
+| <a name="module_microservices_sg"></a> [microservices\_sg](#module\_microservices\_sg) | terraform-aws-modules/security-group/aws | 4.16.0 |
+| <a name="module_rds"></a> [rds](#module\_rds) | terraform-aws-modules/rds/aws | 5.1.1 |
+| <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | 3.18.1 |
 
 ## Resources
 
 | Name | Type |
 |------|------|
+| [random_string.secret_key_base](https://registry.terraform.io/providers/hashicorp/random/3.4.3/docs/resources/string) | resource |
 | [aws_ami.ubuntu](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_availability_zones.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
 | [aws_subnet.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnet) | data source |
@@ -75,19 +94,18 @@ module "vpc" {
 
 ## Inputs
 
-| Name | Description | Type | Default                                                                                                                                                                                                                                                                                                                                                                                                                                   | Required |
-|------|-------------|------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------:|
-| <a name="input_blockscout_settings"></a> [blockscout\_settings](#input\_blockscout\_settings) | Settings of blockscout app | <pre>object({<br>    postgres_password             = optional(string, "postgres")<br>    postgres_user                 = optional(string, "postgres")<br>    postgres_host                 = optional(string, "postgres")<br>    blockscout_docker_image       = optional(string, "blockscout/blockscout-polygon-supernets:5.1.0-prerelease-26e4d6e4")<br>    rpc_address                   = optional(string, "https://rpc-supertestnet.polygon.technology")<br>    chain_id                      = optional(string, "93201")<br>    rust_verification_service_url = optional(string, "https://sc-verifier.aws-k8s.blockscout.com/")<br>    ws_address                    = optional(string, "")<br>    visualize_sol2uml_service_url = optional(string, "")<br>  })</pre> | `{}` | no |
-| <a name="input_verifier_settings"></a> [verifier\_settings](#input\_verifier\_settings) | Settings of verifier | <pre>object({<br>    docker_image                       = optional(string, "ghcr.io/blockscout/smart-contract-verifier:main")<br>    solidity_fetcher_list_url          = optional(string, "https://solc-bin.ethereum.org/linux-amd64/list.json")<br>    solidity_refresh_versions_schedule = optional(string, "0 0 * * * * *")<br>    vyper_fetcher_list_url             = optional(string, "https://raw.githubusercontent.com/blockscout/solc-bin/main/vyper.list.json")<br>    vyper_refresh_versions_schedule    = optional(string, "0 0 * * * * *")<br>    sourcify_api_url                   = optional(string, "https://sourcify.dev/server/")<br>  })</pre> | `{}` | no |
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_blockscout_settings"></a> [blockscout\_settings](#input\_blockscout\_settings) | Settings of blockscout app | <pre>object({<br>    postgres_password             = optional(string, "postgres")<br>    postgres_user                 = optional(string, "postgres")<br>    postgres_host                 = optional(string, "postgres")<br>    blockscout_docker_image       = optional(string, "blockscout/blockscout-polygon-supernets:5.1.0-prerelease-26e4d6e4")<br>    rpc_address                   = optional(string, "https://rpc-supertestnet.polygon.technology")<br>    chain_id                      = optional(string, "93201")<br>    rust_verification_service_url = optional(string, "https://sc-verifier.aws-k8s.blockscout.com/")<br>    ws_address                    = optional(string, "")<br>    visualize_sol2uml_service_url = optional(string, "")<br>    sig_provider_service_url      = optional(string, "")<br>  })</pre> | `{}` | no |
 | <a name="input_create_iam_instance_profile_ssm_policy"></a> [create\_iam\_instance\_profile\_ssm\_policy](#input\_create\_iam\_instance\_profile\_ssm\_policy) | Determines whether an IAM instance profile with SSM policy is created or to use an existing IAM instance profile | `string` | `false` | no |
 | <a name="input_deploy_ec2_instance_db"></a> [deploy\_ec2\_instance\_db](#input\_deploy\_ec2\_instance\_db) | Create ec2 instance with postgresql db in docker | `bool` | `true` | no |
 | <a name="input_deploy_rds_db"></a> [deploy\_rds\_db](#input\_deploy\_rds\_db) | Enabled deploy rds | `bool` | `false` | no |
 | <a name="input_enabled_dns_hostnames"></a> [enabled\_dns\_hostnames](#input\_enabled\_dns\_hostnames) | Autocreate dns names for ec2 instance in route53. Required for work with default DB | `bool` | `true` | no |
 | <a name="input_enabled_nat_gateway"></a> [enabled\_nat\_gateway](#input\_enabled\_nat\_gateway) | Nat gateway enabled | `bool` | `true` | no |
-| <a name="input_eth-bytecode-db_docker_image"></a> [eth-bytecode-db\_docker\_image](#input\_eth-bytecode-db\_docker\_image) | Docker image of eth-bytecode-db | `string` | `"ghcr.io/blockscout/eth-bytecode-db:main"` | no |
-| <a name="input_eth-bytecode-db_enabled"></a> [eth-bytecode-db\_enabled](#input\_eth-bytecode-db\_enabled) | eth-bytecode-db deploy | `bool` | `true` | no |
-| <a name="input_eth-bytecode-db_instance_type"></a> [eth-bytecode-db\_instance\_type](#input\_eth-bytecode-db\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
-| <a name="input_eth-bytecode-db_replicas"></a> [eth-bytecode-db\_replicas](#input\_eth-bytecode-db\_replicas) | Number of eth-bytecode-db replicas | `number` | `1` | no |
+| <a name="input_eth_bytecode_db_docker_image"></a> [eth\_bytecode\_db\_docker\_image](#input\_eth\_bytecode\_db\_docker\_image) | Docker image of eth-bytecode-db | `string` | `"ghcr.io/blockscout/eth-bytecode-db:main"` | no |
+| <a name="input_eth_bytecode_db_enabled"></a> [eth\_bytecode\_db\_enabled](#input\_eth\_bytecode\_db\_enabled) | eth-bytecode-db deploy | `bool` | `true` | no |
+| <a name="input_eth_bytecode_db_instance_type"></a> [eth\_bytecode\_db\_instance\_type](#input\_eth\_bytecode\_db\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
+| <a name="input_eth_bytecode_db_replicas"></a> [eth\_bytecode\_db\_replicas](#input\_eth\_bytecode\_db\_replicas) | Number of eth-bytecode-db replicas | `number` | `1` | no |
 | <a name="input_existed_private_subnets_ids"></a> [existed\_private\_subnets\_ids](#input\_existed\_private\_subnets\_ids) | List of existed id private subnets(For instances) | `list(string)` | `[]` | no |
 | <a name="input_existed_public_subnets_ids"></a> [existed\_public\_subnets\_ids](#input\_existed\_public\_subnets\_ids) | List of existed if public subnets(For LB) | `list(string)` | `[]` | no |
 | <a name="input_existed_rds_subnet_group_name"></a> [existed\_rds\_subnet\_group\_name](#input\_existed\_rds\_subnet\_group\_name) | Name of subnet group for RDS deploy | `string` | `""` | no |
@@ -100,10 +118,10 @@ module "vpc" {
 | <a name="input_rds_allocated_storage"></a> [rds\_allocated\_storage](#input\_rds\_allocated\_storage) | Size of rds storage | `number` | `20` | no |
 | <a name="input_rds_instance_type"></a> [rds\_instance\_type](#input\_rds\_instance\_type) | AWS RDS instance type | `string` | `"db.t3.large"` | no |
 | <a name="input_rds_max_allocated_storage"></a> [rds\_max\_allocated\_storage](#input\_rds\_max\_allocated\_storage) | Max size of rds storage | `number` | `300` | no |
-| <a name="input_sig-provider_docker_image"></a> [sig-provider\_docker\_image](#input\_sig-provider\_docker\_image) | Docker image of sig-provider | `string` | `"ghcr.io/blockscout/sig-provider:main"` | no |
-| <a name="input_sig-provider_enabled"></a> [sig-provider\_enabled](#input\_sig-provider\_enabled) | sig-provider deploy | `bool` | `false` | no |
-| <a name="input_sig-provider_instance_type"></a> [sig-provider\_instance\_type](#input\_sig-provider\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
-| <a name="input_sig-provider_replicas"></a> [sig-provider\_replicas](#input\_sig-provider\_replicas) | Number of sig-provider replicas | `number` | `1` | no |
+| <a name="input_sig_provider_docker_image"></a> [sig\_provider\_docker\_image](#input\_sig\_provider\_docker\_image) | Docker image of sig-provider | `string` | `"ghcr.io/blockscout/sig-provider:main"` | no |
+| <a name="input_sig_provider_enabled"></a> [sig\_provider\_enabled](#input\_sig\_provider\_enabled) | sig-provider deploy | `bool` | `false` | no |
+| <a name="input_sig_provider_instance_type"></a> [sig\_provider\_instance\_type](#input\_sig\_provider\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
+| <a name="input_sig_provider_replicas"></a> [sig\_provider\_replicas](#input\_sig\_provider\_replicas) | Number of sig-provider replicas | `number` | `1` | no |
 | <a name="input_single_nat_gateway"></a> [single\_nat\_gateway](#input\_single\_nat\_gateway) | Should be true if you want to provision a single shared NAT Gateway across all of your private networks | `bool` | `true` | no |
 | <a name="input_ssh_keys"></a> [ssh\_keys](#input\_ssh\_keys) | Create ssh keys | `map(string)` | `{}` | no |
 | <a name="input_ssl_certificate_arn"></a> [ssl\_certificate\_arn](#input\_ssl\_certificate\_arn) | Certificate for ALB | `string` | `""` | no |
@@ -117,6 +135,7 @@ module "vpc" {
 | <a name="input_verifier_enabled"></a> [verifier\_enabled](#input\_verifier\_enabled) | Verifier deploy | `bool` | `true` | no |
 | <a name="input_verifier_instance_type"></a> [verifier\_instance\_type](#input\_verifier\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
 | <a name="input_verifier_replicas"></a> [verifier\_replicas](#input\_verifier\_replicas) | Number of verifier replicas | `number` | `2` | no |
+| <a name="input_verifier_settings"></a> [verifier\_settings](#input\_verifier\_settings) | Settings of verifier | <pre>object({<br>    docker_image                       = optional(string, "ghcr.io/blockscout/smart-contract-verifier:main")<br>    solidity_fetcher_list_url          = optional(string, "https://solc-bin.ethereum.org/linux-amd64/list.json")<br>    solidity_refresh_versions_schedule = optional(string, "0 0 * * * * *")<br>    vyper_fetcher_list_url             = optional(string, "https://raw.githubusercontent.com/blockscout/solc-bin/main/vyper.list.json")<br>    vyper_refresh_versions_schedule    = optional(string, "0 0 * * * * *")<br>    sourcify_api_url                   = optional(string, "https://sourcify.dev/server/")<br>  })</pre> | `{}` | no |
 | <a name="input_verifier_url"></a> [verifier\_url](#input\_verifier\_url) | Url of verifier | `string` | `""` | no |
 | <a name="input_visualizer_docker_image"></a> [visualizer\_docker\_image](#input\_visualizer\_docker\_image) | Docker image of visualizer | `string` | `"ghcr.io/blockscout/visualizer:latest"` | no |
 | <a name="input_visualizer_enabled"></a> [visualizer\_enabled](#input\_visualizer\_enabled) | Visualizer deploy | `bool` | `true` | no |
@@ -129,4 +148,7 @@ module "vpc" {
 
 ## Outputs
 
-No outputs.
+| Name | Description |
+|------|-------------|
+| <a name="output_blockscout_url"></a> [blockscout\_url](#output\_blockscout\_url) | DNS name of frontend |
+<!-- END_TF_DOCS -->
