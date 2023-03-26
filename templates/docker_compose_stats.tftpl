@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  sig-provider:
+    container_name: 'stats'
+    image: ${docker_image}
+    restart: always
+    environment:
+      RUST_LOG: "info"
+      STATS__BLOCKSCOUT_DB_URL: 'postgresql://${postgres_user}:${postgres_password}@${postgres_host}:5432/blockscout'
+      STATS__DB_URL: 'postgresql://${postgres_user}:${postgres_password}@${postgres_host}:5432/stats?ssl=false'
+      STATS__METRICS__ENABLED: "true"
+      STATS__RUN_MIGRATIONS: "true"
+      STATS__TRACING__FORMAT: "json"
+    ports:
+      - 8050:8050
+      - 8051:8051
+    volumes:
+      - ./logs/:/app/logs/

@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  sig-provider:
+    container_name: 'sig-provider'
+    image: ${docker_image}
+    restart: always
+    ports:
+      - 8050:8050
+      - 8051:8051
+    volumes:
+      - ./logs/:/app/logs/

@@ -134,6 +134,13 @@ module "db-sg" {
       protocol                 = "tcp"
       description              = "Postgresql port"
       source_security_group_id = module.application-sg.security_group_id
+    },
+    {
+      from_port                = 5432
+      to_port                  = 5432
+      protocol                 = "tcp"
+      description              = "Postgresql port"
+      source_security_group_id = module.microservices-sg.security_group_id
     }
   ]
   tags = local.final_tags
@@ -184,7 +191,6 @@ module "ec2_database" {
   name                        = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-db-instance"
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = "t2.medium"
-  key_name                    = var.ssh_key_name
   monitoring                  = false
   vpc_security_group_ids      = [module.db-sg.security_group_id]
   subnet_id                   = var.existed_vpc_id == "" ? element(module.vpc[0].private_subnets, 0) : element(slice([for i in data.aws_subnet.this : i.id if i.map_public_ip_on_launch == false], 0, 1), 0)
@@ -241,6 +247,8 @@ module "ec2_asg_indexer" {
     secret_key_base               = random_string.secret_key_base.result
     visualizer_enabled            = false
     visualize_sol2uml_service_url = var.visualizer_enabled ? module.alb-visualizer[0].lb_dns_name : var.blockscout_settings["visualize_sol2uml_service_url"]
+    sig-provider_enabled          = false
+    sig_provider_service_url      = var.sig-provider_enabled ? module.alb-sig-provider[0].lb_dns_name : var.blockscout_settings["sig_provider_service_url"]
     indexer                       = true
     api_and_ui                    = false
   }
@@ -278,6 +286,8 @@ module "ec2_asg_api-and-ui" {
     secret_key_base               = random_string.secret_key_base.result
     visualizer_enabled            = var.visualizer_enabled
     visualize_sol2uml_service_url = var.visualizer_enabled ? module.alb-visualizer[0].lb_dns_name : var.blockscout_settings["visualize_sol2uml_service_url"]
+    sig-provider_enabled          = var.sig-provider_enabled
+    sig_provider_service_url      = var.sig-provider_enabled ? module.alb-sig-provider[0].lb_dns_name : var.blockscout_settings["sig_provider_service_url"]
     indexer                       = false
     api_and_ui                    = true
   }
@@ -328,7 +338,7 @@ module "ec2_asg_visualizer" {
   target_group_arns    = module.alb-visualizer[0].target_group_arns
   ## Instance settings
   image_id                    = data.aws_ami.ubuntu.id
-  instance_type               = var.verifier_instance_type
+  instance_type               = var.visualizer_instance_type
   create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
   iam_instance_profile_arn    = var.iam_instance_profile_arn
   iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-verifier"
@@ -339,6 +349,94 @@ module "ec2_asg_visualizer" {
   security_groups             = module.microservices-sg.security_group_id
   docker_compose_config = {
     docker_image = var.visualizer_docker_image
+  }
+  tags = local.final_tags
+}
+
+module "ec2_asg_sig-provider" {
+  count  = var.sig-provider_enabled ? 1 : 0
+  source = "./asg"
+  ## ASG settings
+  name                 = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-sig-provider-instance"
+  min_size             = var.sig-provider_replicas
+  max_size             = var.sig-provider_replicas
+  vpc_zone_identifier  = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
+  launch_template_name = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-sig-provider-launch-template"
+  target_group_arns    = module.alb-sig-provider[0].target_group_arns
+  ## Instance settings
+  image_id                    = data.aws_ami.ubuntu.id
+  instance_type               = var.sig-provider_instance_type
+  create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
+  iam_instance_profile_arn    = var.iam_instance_profile_arn
+  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-sig-provider"
+  ## Init settings
+  docker_compose_file_postfix = "_sig-provider"
+  path_docker_compose_files   = var.path_docker_compose_files
+  user                        = var.user
+  security_groups             = module.microservices-sg.security_group_id
+  docker_compose_config = {
+    docker_image = var.sig-provider_docker_image
+  }
+  tags = local.final_tags
+}
+
+module "ec2_asg_stats" {
+  count  = var.stats_enabled ? 1 : 0
+  source = "./asg"
+  ## ASG settings
+  name                 = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-stats-instance"
+  min_size             = var.stats_replicas
+  max_size             = var.stats_replicas
+  vpc_zone_identifier  = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
+  launch_template_name = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-stats-launch-template"
+  target_group_arns    = module.alb-stats[0].target_group_arns
+  ## Instance settings
+  image_id                    = data.aws_ami.ubuntu.id
+  instance_type               = var.stats_instance_type
+  create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
+  iam_instance_profile_arn    = var.iam_instance_profile_arn
+  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-stats"
+  ## Init settings
+  docker_compose_file_postfix = "_stats"
+  path_docker_compose_files   = var.path_docker_compose_files
+  user                        = var.user
+  security_groups             = module.microservices-sg.security_group_id
+  docker_compose_config = {
+    docker_image      = var.stats_docker_image
+    postgres_password = var.deploy_rds_db ? module.rds[0].db_instance_password : var.blockscout_settings["postgres_password"]
+    postgres_user     = var.deploy_rds_db ? module.rds[0].db_instance_username : var.blockscout_settings["postgres_user"]
+    postgres_host     = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
+  }
+  tags = local.final_tags
+}
+
+module "ec2_asg_eth-bytecode-db" {
+  count  = var.eth-bytecode-db_enabled ? 1 : 0
+  source = "./asg"
+  ## ASG settings
+  name                 = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-eth-bytecode-db-instance"
+  min_size             = var.eth-bytecode-db_replicas
+  max_size             = var.eth-bytecode-db_replicas
+  vpc_zone_identifier  = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
+  launch_template_name = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-eth-bytecode-db-launch-template"
+  target_group_arns    = module.alb-eth-bytecode-db[0].target_group_arns
+  ## Instance settings
+  image_id                    = data.aws_ami.ubuntu.id
+  instance_type               = var.eth-bytecode-db_instance_type
+  create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
+  iam_instance_profile_arn    = var.iam_instance_profile_arn
+  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-eth-bytecode-db"
+  ## Init settings
+  docker_compose_file_postfix = "_eth-bytecode-db"
+  path_docker_compose_files   = var.path_docker_compose_files
+  user                        = var.user
+  security_groups             = module.microservices-sg.security_group_id
+  docker_compose_config = {
+    docker_image      = var.eth-bytecode-db_docker_image
+    postgres_password = var.deploy_rds_db ? module.rds[0].db_instance_password : var.blockscout_settings["postgres_password"]
+    postgres_user     = var.deploy_rds_db ? module.rds[0].db_instance_username : var.blockscout_settings["postgres_user"]
+    postgres_host     = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
+    verifier_url      = var.verifier_enabled ? (var.verifier_url != "" ? var.verifier_url : module.alb-verifier[0].lb_dns_name) : var.verifier_url
   }
   tags = local.final_tags
 }
@@ -381,6 +479,48 @@ module "alb-visualizer" {
   backend_port      = 8050
   health_check_path = "/health"
   name_prefix       = "viz-"
+  security_groups   = module.lb-microservices-sg.security_group_id
+  tags              = local.final_tags
+}
+
+module "alb-sig-provider" {
+  count             = var.sig-provider_enabled ? 1 : 0
+  source            = "./alb"
+  name              = "sig-provider"
+  internal          = true
+  vpc_id            = local.vpc_id_rule
+  subnets           = local.subnets_rule
+  backend_port      = 8050
+  health_check_path = "/health?service="
+  name_prefix       = "sig-"
+  security_groups   = module.lb-microservices-sg.security_group_id
+  tags              = local.final_tags
+}
+
+module "alb-stats" {
+  count             = var.stats_enabled ? 1 : 0
+  source            = "./alb"
+  name              = "stats"
+  internal          = true
+  vpc_id            = local.vpc_id_rule
+  subnets           = local.subnets_rule
+  backend_port      = 8050
+  health_check_path = "/health?service="
+  name_prefix       = "stat-"
+  security_groups   = module.lb-microservices-sg.security_group_id
+  tags              = local.final_tags
+}
+
+module "alb-eth-bytecode-db" {
+  count             = var.eth-bytecode-db_enabled ? 1 : 0
+  source            = "./alb"
+  name              = "alb-eth-bytecode-db"
+  internal          = true
+  vpc_id            = local.vpc_id_rule
+  subnets           = local.subnets_rule
+  backend_port      = 8050
+  health_check_path = "/health"
+  name_prefix       = "byte-"
   security_groups   = module.lb-microservices-sg.security_group_id
   tags              = local.final_tags
 }

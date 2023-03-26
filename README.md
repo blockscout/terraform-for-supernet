@@ -84,6 +84,10 @@ module "vpc" {
 | <a name="input_deploy_rds_db"></a> [deploy\_rds\_db](#input\_deploy\_rds\_db) | Enabled deploy rds | `bool` | `false` | no |
 | <a name="input_enabled_dns_hostnames"></a> [enabled\_dns\_hostnames](#input\_enabled\_dns\_hostnames) | Autocreate dns names for ec2 instance in route53. Required for work with default DB | `bool` | `true` | no |
 | <a name="input_enabled_nat_gateway"></a> [enabled\_nat\_gateway](#input\_enabled\_nat\_gateway) | Nat gateway enabled | `bool` | `true` | no |
+| <a name="input_eth-bytecode-db_docker_image"></a> [eth-bytecode-db\_docker\_image](#input\_eth-bytecode-db\_docker\_image) | Docker image of eth-bytecode-db | `string` | `"ghcr.io/blockscout/eth-bytecode-db:main"` | no |
+| <a name="input_eth-bytecode-db_enabled"></a> [eth-bytecode-db\_enabled](#input\_eth-bytecode-db\_enabled) | eth-bytecode-db deploy | `bool` | `true` | no |
+| <a name="input_eth-bytecode-db_instance_type"></a> [eth-bytecode-db\_instance\_type](#input\_eth-bytecode-db\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
+| <a name="input_eth-bytecode-db_replicas"></a> [eth-bytecode-db\_replicas](#input\_eth-bytecode-db\_replicas) | Number of eth-bytecode-db replicas | `number` | `1` | no |
 | <a name="input_existed_private_subnets_ids"></a> [existed\_private\_subnets\_ids](#input\_existed\_private\_subnets\_ids) | List of existed id private subnets(For instances) | `list(string)` | `[]` | no |
 | <a name="input_existed_public_subnets_ids"></a> [existed\_public\_subnets\_ids](#input\_existed\_public\_subnets\_ids) | List of existed if public subnets(For LB) | `list(string)` | `[]` | no |
 | <a name="input_existed_rds_subnet_group_name"></a> [existed\_rds\_subnet\_group\_name](#input\_existed\_rds\_subnet\_group\_name) | Name of subnet group for RDS deploy | `string` | `""` | no |
@@ -96,25 +100,32 @@ module "vpc" {
 | <a name="input_rds_allocated_storage"></a> [rds\_allocated\_storage](#input\_rds\_allocated\_storage) | Size of rds storage | `number` | `20` | no |
 | <a name="input_rds_instance_type"></a> [rds\_instance\_type](#input\_rds\_instance\_type) | AWS RDS instance type | `string` | `"db.t3.large"` | no |
 | <a name="input_rds_max_allocated_storage"></a> [rds\_max\_allocated\_storage](#input\_rds\_max\_allocated\_storage) | Max size of rds storage | `number` | `300` | no |
+| <a name="input_sig-provider_docker_image"></a> [sig-provider\_docker\_image](#input\_sig-provider\_docker\_image) | Docker image of sig-provider | `string` | `"ghcr.io/blockscout/sig-provider:main"` | no |
+| <a name="input_sig-provider_enabled"></a> [sig-provider\_enabled](#input\_sig-provider\_enabled) | sig-provider deploy | `bool` | `false` | no |
+| <a name="input_sig-provider_instance_type"></a> [sig-provider\_instance\_type](#input\_sig-provider\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
+| <a name="input_sig-provider_replicas"></a> [sig-provider\_replicas](#input\_sig-provider\_replicas) | Number of sig-provider replicas | `number` | `1` | no |
 | <a name="input_single_nat_gateway"></a> [single\_nat\_gateway](#input\_single\_nat\_gateway) | Should be true if you want to provision a single shared NAT Gateway across all of your private networks | `bool` | `true` | no |
-| <a name="input_ssh_key_name"></a> [ssh\_key\_name](#input\_ssh\_key\_name) | Ssh key name | `string` | `""` | no |
 | <a name="input_ssh_keys"></a> [ssh\_keys](#input\_ssh\_keys) | Create ssh keys | `map(string)` | `{}` | no |
 | <a name="input_ssl_certificate_arn"></a> [ssl\_certificate\_arn](#input\_ssl\_certificate\_arn) | Certificate for ALB | `string` | `""` | no |
+| <a name="input_stats_docker_image"></a> [stats\_docker\_image](#input\_stats\_docker\_image) | Docker image of stats | `string` | `"ghcr.io/blockscout/stats:main"` | no |
+| <a name="input_stats_enabled"></a> [stats\_enabled](#input\_stats\_enabled) | stats deploy | `bool` | `true` | no |
+| <a name="input_stats_instance_type"></a> [stats\_instance\_type](#input\_stats\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
+| <a name="input_stats_replicas"></a> [stats\_replicas](#input\_stats\_replicas) | Number of stats replicas | `number` | `1` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Add custom tags for all resources managed by this script | `map(string)` | `{}` | no |
 | <a name="input_ui_and_api_instance_type"></a> [ui\_and\_api\_instance\_type](#input\_ui\_and\_api\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
 | <a name="input_user"></a> [user](#input\_user) | What user to service run as | `string` | `"root"` | no |
 | <a name="input_verifier_enabled"></a> [verifier\_enabled](#input\_verifier\_enabled) | Verifier deploy | `bool` | `true` | no |
 | <a name="input_verifier_instance_type"></a> [verifier\_instance\_type](#input\_verifier\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
 | <a name="input_verifier_replicas"></a> [verifier\_replicas](#input\_verifier\_replicas) | Number of verifier replicas | `number` | `2` | no |
+| <a name="input_verifier_url"></a> [verifier\_url](#input\_verifier\_url) | Url of verifier | `string` | `""` | no |
+| <a name="input_visualizer_docker_image"></a> [visualizer\_docker\_image](#input\_visualizer\_docker\_image) | Docker image of visualizer | `string` | `"ghcr.io/blockscout/visualizer:latest"` | no |
 | <a name="input_visualizer_enabled"></a> [visualizer\_enabled](#input\_visualizer\_enabled) | Visualizer deploy | `bool` | `true` | no |
+| <a name="input_visualizer_instance_type"></a> [visualizer\_instance\_type](#input\_visualizer\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
 | <a name="input_visualizer_replicas"></a> [visualizer\_replicas](#input\_visualizer\_replicas) | Number of visualizer replicas | `number` | `2` | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC cidr | `string` | `"10.105.0.0/16"` | no |
 | <a name="input_vpc_name"></a> [vpc\_name](#input\_vpc\_name) | VPC name | `string` | `""` | no |
 | <a name="input_vpc_private_subnet_cidrs"></a> [vpc\_private\_subnet\_cidrs](#input\_vpc\_private\_subnet\_cidrs) | Not required! You can set custom private subnets | `list(string)` | `null` | no |
 | <a name="input_vpc_public_subnet_cidrs"></a> [vpc\_public\_subnet\_cidrs](#input\_vpc\_public\_subnet\_cidrs) | Not required! You can set custom public subnets | `list(string)` | `null` | no |
-| <a name="input_visualizer_docker_image"></a> [visualizer\_docker\_image](#input\_visualizer\_docker\_image) | Docker image of visualizer | `string` | `"ghcr.io/blockscout/visualizer:latest"` | no |
-
-
 
 ## Outputs
 
