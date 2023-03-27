@@ -151,4 +151,5 @@ module "vpc" {
 | Name | Description |
 |------|-------------|
 | <a name="output_blockscout_url"></a> [blockscout\_url](#output\_blockscout\_url) | DNS name of frontend |
+
 <!-- END_TF_DOCS -->
