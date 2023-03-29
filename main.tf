@@ -282,7 +282,7 @@ module "ec2_asg_api_and_ui" {
     ws_address                    = var.blockscout_settings["ws_address"]
     postgres_host                 = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
     chain_id                      = var.blockscout_settings["chain_id"]
-    rust_verification_service_url = var.verifier_enabled ? module.alb_verifier[0].lb_dns_name : var.blockscout_settings["rust_verification_service_url"]
+    rust_verification_service_url = var.eth_bytecode_db_enabled ? module.alb_eth_bytecode_db[0].lb_dns_name : var.blockscout_settings["rust_verification_service_url"]
     secret_key_base               = random_string.secret_key_base.result
     visualizer_enabled            = var.visualizer_enabled
     visualize_sol2uml_service_url = var.visualizer_enabled ? module.alb_visualizer[0].lb_dns_name : var.blockscout_settings["visualize_sol2uml_service_url"]
