@@ -24,6 +24,11 @@ variable "rds_max_allocated_storage" {
   type        = number
   default     = 300
 }
+variable "rds_multi_az" {
+  description = "Creates a primary DB instance and a standby DB instance in a different AZ. Provides high availability and data redundancy, but the standby DB instance doesn't support connections for read workloads."
+  type        = bool
+  default     = false
+}
 
 ## Service settings
 variable "path_docker_compose_files" {
