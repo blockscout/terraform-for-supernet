@@ -118,6 +118,7 @@ module "vpc" {
 | <a name="input_rds_allocated_storage"></a> [rds\_allocated\_storage](#input\_rds\_allocated\_storage) | Size of rds storage | `number` | `20` | no |
 | <a name="input_rds_instance_type"></a> [rds\_instance\_type](#input\_rds\_instance\_type) | AWS RDS instance type | `string` | `"db.t3.large"` | no |
 | <a name="input_rds_max_allocated_storage"></a> [rds\_max\_allocated\_storage](#input\_rds\_max\_allocated\_storage) | Max size of rds storage | `number` | `300` | no |
+| <a name="input_rds_multi_az"></a> [rds\_multi\_az](#input\_rds\_multi\_az) | Creates a primary DB instance and a standby DB instance in a different AZ. Provides high availability and data redundancy, but the standby DB instance doesn't support connections for read workloads. | `bool` | `false` | no |
 | <a name="input_sig_provider_docker_image"></a> [sig\_provider\_docker\_image](#input\_sig\_provider\_docker\_image) | Docker image of sig-provider | `string` | `"ghcr.io/blockscout/sig-provider:main"` | no |
 | <a name="input_sig_provider_enabled"></a> [sig\_provider\_enabled](#input\_sig\_provider\_enabled) | sig-provider deploy | `bool` | `false` | no |
 | <a name="input_sig_provider_instance_type"></a> [sig\_provider\_instance\_type](#input\_sig\_provider\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
@@ -151,5 +152,4 @@ module "vpc" {
 | Name | Description |
 |------|-------------|
 | <a name="output_blockscout_url"></a> [blockscout\_url](#output\_blockscout\_url) | DNS name of frontend |
-
 <!-- END_TF_DOCS -->
