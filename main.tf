@@ -171,7 +171,7 @@ module "rds" {
   db_name                             = "blockscout"
   username                            = "blockscout"
   port                                = 5432
-  multi_az                            = false
+  multi_az                            = var.rds_multi_az
   db_subnet_group_name                = var.existed_rds_subnet_group_name != "" ? var.existed_rds_subnet_group_name : module.vpc[0].database_subnet_group
   vpc_security_group_ids              = [module.db_sg.security_group_id]
   maintenance_window                  = "Mon:00:00-Mon:03:00"

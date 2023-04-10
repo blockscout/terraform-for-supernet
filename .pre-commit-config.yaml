@@ -1,11 +1,92 @@
 ---
+
 fail_fast: false
 minimum_pre_commit_version: "2.6.0"
+
 repos:
   -
-    repo: https://github.com/aws-ia/pre-commit-configs
-    # To update run:
-    # pre-commit autoupdate --freeze
-    rev: v1.6.2
+    repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3298ddab3c13dd77d6ce1fc0baf97691430d84b0  # frozen: v4.3.0
     hooks:
-      - id: aws-ia-meta-hook
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-json
+      - id: check-symlinks
+      - id: check-vcs-permalinks
+      - id: check-xml
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: "templates/.*"
+      - id: mixed-line-ending
+      #      - id: trailing-whitespace
+      #- id: flake8
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: 1d54ea2b9950097568c6a7a2e2bcb6d4b4ebfb61  # frozen: v1.77.0
+    hooks:
+      # see https://github.com/antonbabenko/pre-commit-terraform#terraform_fmt
+      - id: terraform_fmt
+
+      # see https://github.com/antonbabenko/pre-commit-terraform#terraform_validate
+      - id: terraform_validate
+        exclude: examples/.*
+
+      # see https://github.com/antonbabenko/pre-commit-terraform#terraform_docs
+      - id: terraform_docs
+        args:
+          - "--args=--config=.terraform-docs.yaml"
+          - "--args=--lockfile=false"
+
+      # see https://github.com/antonbabenko/pre-commit-terraform#terraform_providers_lock
+      - id: terraform_providers_lock
+
+      # see https://github.com/antonbabenko/pre-commit-terraform#terraform_tflint
+      - id: terraform_tflint
+        exclude: 'examples/.*'
+        args:
+          - "--args=--config=__GIT_WORKING_DIR__/.tflint.hcl"
+
+      - id: terraform_tfsec
+        args:
+          - "--args=--exclude-downloaded-modules"
+          - "--args=--custom-check-dir=__GIT_WORKING_DIR__/.tfsec"
+        files: \.tf$
+        exclude: \.terraform\/.*$
+  - repo: https://github.com/aws-quickstart/qs-cfn-lint-rules
+    rev: 93a9fc75ed3d7ede082b8afad4cdd97e4794cee0  # frozen: v1.4
+    hooks:
+      # Inverse flag passed to effectively enforce that CFN templates must be in `templates/`
+      - id: files-are-not-cfn
+        name: Validating no CFN files exist outside of templates/
+        verbose: true
+        types_or: [json,yaml]
+        require_serial: true
+        args:
+          - '-i'
+        exclude: '^templates/.*'
+      - id: files-are-cfn
+        name: Validating only CFN files exist in templates/
+        verbose: true
+        require_serial: true
+        files: '^templates/.*'
+      - id: qs-cfn-lint-wrapped
+        files: '^templates/.*'
+  - repo: https://github.com/aws-ia/pre-commit-hooks
+    rev: 16be3ef859223383f402c8523bfd3bbb5f750894  # frozen: v1.0
+    hooks:
+      - id: git-submodule-sanity-check
+        always_run: true
+  - repo: local
+    hooks:
+      - id: restricted-filenames
+        name: Check commits for unexpected file extensions
+        entry: These files are prohibited and should be removed.
+        language: fail
+        files: '.*\.(taskcat_overrides.yml)'
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1ed79063e3672a1c6d91ee27cb648e07a7465344  # frozen: 1.7.4
+    hooks:
+      - id: bandit
+        description: 'Bandit is a tool for finding common security issues in Python code'
