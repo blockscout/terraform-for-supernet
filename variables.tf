@@ -142,7 +142,7 @@ variable "blockscout_settings" {
     postgres_password             = optional(string, "postgres")
     postgres_user                 = optional(string, "postgres")
     postgres_host                 = optional(string, "postgres")
-    blockscout_docker_image       = optional(string, "blockscout/blockscout-polygon-supernets:5.1.0-prerelease-26e4d6e4")
+    blockscout_docker_image       = optional(string, "blockscout/blockscout-polygon-supernets:5.1.3-prerelease-61c1238e")
     rpc_address                   = optional(string, "https://rpc-supertestnet.polygon.technology")
     chain_id                      = optional(string, "93201")
     rust_verification_service_url = optional(string, "https://sc-verifier.aws-k8s.blockscout.com/")

@@ -20,12 +20,12 @@ services:
       DISABLE_INDEXER: "true"
       SECRET_KEY_BASE: '${secret_key_base}'
 %{ if visualizer_enabled ~}
-      VISUALIZE_SOL2UML_ENABLED: "true"
-      VISUALIZE_SOL2UML_SERVICE_URL: '${visualize_sol2uml_service_url}'
+      MICROSERVICE_VISUALIZE_SOL2UML_ENABLED: "true"
+      MICROSERVICE_VISUALIZE_SOL2UML_URL: '${visualize_sol2uml_service_url}'
 %{ endif ~}
 %{ if sig_provider_enabled ~}
-      SIG_PROVIDER_ENABLED: "true"
-      SIG_PROVIDER_SERVICE_URL: '${sig_provider_service_url}'
+      MICROSERVICE_SIG_PROVIDER_ENABLED: "true"
+      MICROSERVICE_SIG_PROVIDER_URL: '${sig_provider_service_url}'
 %{ endif ~}
 %{ endif ~}
 %{ if indexer ~}
@@ -33,8 +33,7 @@ services:
       DISABLE_READ_API: "true"
       DISABLE_WRITE_API: "true"
 %{ endif ~}
-      SHOW_PRICE_CHART: "false"
-      BLOCKSCOUT_VERSION: v5.1.0-beta
+      BLOCKSCOUT_VERSION: v5.1.3-beta
       ETHEREUM_JSONRPC_TRACE_URL: '${rpc_address}'
       ETHEREUM_JSONRPC_HTTP_URL: '${rpc_address}'
       ETHEREUM_JSONRPC_VARIANT: "nethermind"
@@ -49,15 +48,8 @@ services:
       NETWORK_ICON: "_network_icon.html"
       COIN: "MATIC"
       COIN_NAME: "MATIC"
-      HISTORY_FETCH_INTERVAL: "60"
-      TXS_HISTORIAN_INIT_LAG: "0"
       TXS_STATS_DAYS_TO_COMPILE_AT_INIT: "1"
       COIN_BALANCE_HISTORY_DAYS: "90"
-      GAS_PRICE_ORACLE_NUM_OF_BLOCKS: "200"
-      GAS_PRICE_ORACLE_SAFELOW_PERCENTILE: "35"
-      GAS_PRICE_ORACLE_AVERAGE_PERCENTILE: "60"
-      GAS_PRICE_ORACLE_FAST_PERCENTILE: "90"
-      GAS_PRICE_ORACLE_CACHE_PERIOD: "300"
       POOL_SIZE: "20"
       DISPLAY_TOKEN_ICONS: "true"
       FETCH_REWARDS_WAY: "manual"
@@ -65,8 +57,8 @@ services:
       INDEXER_DISABLE_INTERNAL_TRANSACTIONS_FETCHER: "true"
       CHAIN_ID: '${chain_id}'
       GRAPHIQL_TRANSACTION: "0x728e0551d657e418762b14a264a4d120da3f5277a690db1e8b2a5781848b8589"
-      ENABLE_RUST_VERIFICATION_SERVICE: "true"
-      RUST_VERIFICATION_SERVICE_URL: '${rust_verification_service_url}'
+      MICROSERVICE_SC_VERIFIER_ENABLED: "true"
+      MICROSERVICE_SC_VERIFIER_URL: '${rust_verification_service_url}'
       INDEXER_MEMORY_LIMIT: "3"
     ports:
       - 4000:4000
