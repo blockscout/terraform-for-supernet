@@ -44,14 +44,14 @@ module "vpc" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.39.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.64.0 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | 3.4.3 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.39.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.64.0 |
 | <a name="provider_random"></a> [random](#provider\_random) | 3.4.3 |
 
 ## Modules
@@ -102,6 +102,7 @@ module "vpc" {
 | <a name="input_deploy_rds_db"></a> [deploy\_rds\_db](#input\_deploy\_rds\_db) | Enabled deploy rds | `bool` | `false` | no |
 | <a name="input_enabled_dns_hostnames"></a> [enabled\_dns\_hostnames](#input\_enabled\_dns\_hostnames) | Autocreate dns names for ec2 instance in route53. Required for work with default DB | `bool` | `true` | no |
 | <a name="input_enabled_nat_gateway"></a> [enabled\_nat\_gateway](#input\_enabled\_nat\_gateway) | Nat gateway enabled | `bool` | `true` | no |
+| <a name="input_eth_bytecode_db_create_database"></a> [eth\_bytecode\_db\_create\_database](#input\_eth\_bytecode\_db\_create\_database) | Create database in application start | `bool` | `true` | no |
 | <a name="input_eth_bytecode_db_docker_image"></a> [eth\_bytecode\_db\_docker\_image](#input\_eth\_bytecode\_db\_docker\_image) | Docker image of eth-bytecode-db | `string` | `"ghcr.io/blockscout/eth-bytecode-db:main"` | no |
 | <a name="input_eth_bytecode_db_enabled"></a> [eth\_bytecode\_db\_enabled](#input\_eth\_bytecode\_db\_enabled) | eth-bytecode-db deploy | `bool` | `true` | no |
 | <a name="input_eth_bytecode_db_instance_type"></a> [eth\_bytecode\_db\_instance\_type](#input\_eth\_bytecode\_db\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
@@ -111,7 +112,7 @@ module "vpc" {
 | <a name="input_existed_rds_subnet_group_name"></a> [existed\_rds\_subnet\_group\_name](#input\_existed\_rds\_subnet\_group\_name) | Name of subnet group for RDS deploy | `string` | `""` | no |
 | <a name="input_existed_vpc_id"></a> [existed\_vpc\_id](#input\_existed\_vpc\_id) | Required for using existed vpc. ID of VPC | `string` | `""` | no |
 | <a name="input_iam_instance_profile_arn"></a> [iam\_instance\_profile\_arn](#input\_iam\_instance\_profile\_arn) | Amazon Resource Name (ARN) of an existing IAM instance profile. Used when `create_iam_instance_profile_ssm_policy` = `false` | `string` | `null` | no |
-| <a name="input_image_name"></a> [image\_name](#input\_image\_name) | OS image mask | `string` | `"ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"` | no |
+| <a name="input_image_name"></a> [image\_name](#input\_image\_name) | OS image mask | `string` | `"ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-202304*"` | no |
 | <a name="input_image_owner"></a> [image\_owner](#input\_image\_owner) | ID of image owner | `string` | `"679593333241"` | no |
 | <a name="input_indexer_instance_type"></a> [indexer\_instance\_type](#input\_indexer\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
 | <a name="input_path_docker_compose_files"></a> [path\_docker\_compose\_files](#input\_path\_docker\_compose\_files) | Path in ec2 instance for blockscout files | `string` | `"/opt/blockscout"` | no |
@@ -126,6 +127,7 @@ module "vpc" {
 | <a name="input_single_nat_gateway"></a> [single\_nat\_gateway](#input\_single\_nat\_gateway) | Should be true if you want to provision a single shared NAT Gateway across all of your private networks | `bool` | `true` | no |
 | <a name="input_ssh_keys"></a> [ssh\_keys](#input\_ssh\_keys) | Create ssh keys | `map(string)` | `{}` | no |
 | <a name="input_ssl_certificate_arn"></a> [ssl\_certificate\_arn](#input\_ssl\_certificate\_arn) | Certificate for ALB | `string` | `""` | no |
+| <a name="input_stats_create_database"></a> [stats\_create\_database](#input\_stats\_create\_database) | Create database in application start | `bool` | `true` | no |
 | <a name="input_stats_docker_image"></a> [stats\_docker\_image](#input\_stats\_docker\_image) | Docker image of stats | `string` | `"ghcr.io/blockscout/stats:main"` | no |
 | <a name="input_stats_enabled"></a> [stats\_enabled](#input\_stats\_enabled) | stats deploy | `bool` | `true` | no |
 | <a name="input_stats_instance_type"></a> [stats\_instance\_type](#input\_stats\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
