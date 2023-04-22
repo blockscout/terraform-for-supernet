@@ -406,6 +406,7 @@ module "ec2_asg_stats" {
     postgres_password = var.deploy_rds_db ? module.rds[0].db_instance_password : var.blockscout_settings["postgres_password"]
     postgres_user     = var.deploy_rds_db ? module.rds[0].db_instance_username : var.blockscout_settings["postgres_user"]
     postgres_host     = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
+    create_database   = var.stats_create_database
   }
   tags = local.final_tags
 }
@@ -436,7 +437,8 @@ module "ec2_asg_eth_bytecode_db" {
     postgres_password = var.deploy_rds_db ? module.rds[0].db_instance_password : var.blockscout_settings["postgres_password"]
     postgres_user     = var.deploy_rds_db ? module.rds[0].db_instance_username : var.blockscout_settings["postgres_user"]
     postgres_host     = var.deploy_rds_db ? module.rds[0].db_instance_address : module.ec2_database[0].private_dns
-    verifier_url      = var.verifier_enabled ? (var.verifier_url != "" ? var.verifier_url : module.alb_verifier[0].lb_dns_name) : var.verifier_url
+    verifier_url      = var.verifier_enabled ? (var.verifier_url != "" ? var.verifier_url : "http://${module.alb_verifier[0].lb_dns_name}") : var.verifier_url
+    create_database   = var.eth_bytecode_db_create_database
   }
   tags = local.final_tags
 }

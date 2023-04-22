@@ -1,7 +1,7 @@
 version: '3.8'
 services:
-  sig-provider:
-    container_name: 'stats'
+  eth-bytecode-db:
+    container_name: 'eth-bytecode-db'
     image: ${docker_image}
     restart: always
     environment:
@@ -11,6 +11,7 @@ services:
       ETH_BYTECODE_DB__SERVER__HTTP__MAX_BODY_SIZE: 10485760
       ETH_BYTECODE_DB__TRACING__FORMAT: "json"
       ETH_BYTECODE_DB__VERIFIER__URI: '${verifier_url}'
+      ETH_BYTECODE_DB__DATABASE__CREATE_DATABASE: "${create_database}"
       RUST_LOG : info
     ports:
       - 8050:8050
