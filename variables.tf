@@ -44,7 +44,7 @@ variable "user" {
 variable "image_name" {
   description = "OS image mask"
   type        = string
-  default     = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
+  default     = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-202304*"
 }
 variable "image_owner" {
   description = "ID of image owner"
@@ -257,6 +257,11 @@ variable "stats_docker_image" {
   type        = string
   default     = "ghcr.io/blockscout/stats:main"
 }
+variable "stats_create_database" {
+  description = "Create database in application start"
+  type        = bool
+  default     = true
+}
 
 ## eth-bytecode-db settings
 variable "eth_bytecode_db_enabled" {
@@ -283,4 +288,9 @@ variable "verifier_url" {
   description = "Url of verifier"
   type        = string
   default     = ""
+}
+variable "eth_bytecode_db_create_database" {
+  description = "Create database in application start"
+  type        = bool
+  default     = true
 }
