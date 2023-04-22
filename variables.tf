@@ -162,6 +162,27 @@ variable "indexer_instance_type" {
   type        = string
   default     = "t2.medium"
 }
+variable "new_frontend_enabled" {
+  description = "Switch to new frontend"
+  type        = bool
+  default     = true
+}
+variable "new_frontend_instance_type" {
+  description = "AWS instance type"
+  type        = string
+  default     = "t2.medium"
+}
+variable "new_frontend_settings" {
+  description = "Settings of new frontend"
+  type = object({
+    docker_image       = optional(string, "ghcr.io/blockscout/frontend:main")
+    domain             = optional(string)
+    stats_api_url      = optional(string)
+    rpc_address        = optional(string, "https://rpc-supertestnet.polygon.technology")
+    visualizer_api_url = optional(string)
+  })
+  default = {}
+}
 
 ## Verifier settings
 variable "verifier_enabled" {

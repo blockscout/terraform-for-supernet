@@ -34,6 +34,13 @@ module "lb_sg" {
       protocol    = "tcp"
       description = "Blockscout port"
       cidr_blocks = var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
+    },
+    {
+      from_port   = 3000
+      to_port     = 3000
+      protocol    = "tcp"
+      description = "New frontend port"
+      cidr_blocks = var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
     }
   ]
   tags = local.final_tags
@@ -105,6 +112,14 @@ module "application_sg" {
       description = "Blockscout port"
       cidr_blocks = var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
       self        = true
+    },
+    {
+      from_port   = 3000
+      to_port     = 3000
+      protocol    = "tcp"
+      description = "New frontend"
+      cidr_blocks = var.existed_vpc_id == "" ? var.vpc_cidr : data.aws_vpc.selected[0].cidr_block
+      self        = true
     }
   ]
   ingress_with_source_security_group_id = [
@@ -113,6 +128,13 @@ module "application_sg" {
       to_port                  = 4000
       protocol                 = "tcp"
       description              = "Blockscout port"
+      source_security_group_id = module.lb_sg.security_group_id
+    },
+    {
+      from_port                = 3000
+      to_port                  = 3000
+      protocol                 = "tcp"
+      description              = "New frontend port"
       source_security_group_id = module.lb_sg.security_group_id
     }
   ]
@@ -251,6 +273,38 @@ module "ec2_asg_indexer" {
     sig_provider_service_url      = var.sig_provider_enabled ? module.alb_sig_provider[0].lb_dns_name : var.blockscout_settings["sig_provider_service_url"]
     indexer                       = true
     api_and_ui                    = false
+  }
+  tags = local.final_tags
+}
+
+module "ec2_asg_new_frontend" {
+  count  = var.new_frontend_enabled ? 1 : 0
+  source = "./asg"
+  ## ASG settings
+  name                 = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-asg-new-frontend"
+  min_size             = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
+  max_size             = length(var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets)
+  vpc_zone_identifier  = var.existed_vpc_id != "" ? var.existed_private_subnets_ids : module.vpc[0].private_subnets
+  launch_template_name = "${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-new-frontend-launch-template"
+  target_group_arns    = module.alb_new_frontend[0].target_group_arns
+  ## Instance settings
+  image_id                    = data.aws_ami.ubuntu.id
+  instance_type               = var.new_frontend_instance_type
+  create_iam_instance_profile = var.create_iam_instance_profile_ssm_policy
+  iam_instance_profile_arn    = var.iam_instance_profile_arn
+  iam_role_name               = "role-${var.vpc_name != "" ? var.vpc_name : "existed-vpc"}-new-frontend"
+  ## Init settings
+  docker_compose_file_postfix = "_new-frontend"
+  path_docker_compose_files   = var.path_docker_compose_files
+  user                        = var.user
+  security_groups             = module.application_sg.security_group_id
+  docker_compose_config = {
+    docker_image       = var.new_frontend_settings["docker_image"]
+    domain             = var.new_frontend_settings["domain"] != null ? var.new_frontend_settings["domain"] : module.alb_new_frontend[0].lb_dns_name
+    stats_api_url      = var.new_frontend_settings["stats_api_url"] != null ? var.new_frontend_settings["stats_api_url"] : module.alb_stats[0].lb_dns_name
+    rpc_address        = var.new_frontend_settings["rpc_address"]
+    visualizer_api_url = var.new_frontend_settings["visualizer_api_url"] != null ? var.new_frontend_settings["visualizer_api_url"] : module.alb_visualizer[0].lb_dns_name
+
   }
   tags = local.final_tags
 }
@@ -452,6 +506,21 @@ module "alb" {
   backend_port        = 4000
   health_check_path   = "/"
   name_prefix         = "apiui-"
+  security_groups     = module.lb_sg.security_group_id
+  ssl_certificate_arn = var.ssl_certificate_arn
+  tags                = local.final_tags
+}
+
+module "alb_new_frontend" {
+  count               = var.new_frontend_enabled ? 1 : 0
+  source              = "./alb"
+  name                = "new-frontend"
+  internal            = false
+  vpc_id              = local.vpc_id_rule
+  subnets             = local.subnets_rule
+  backend_port        = 3000
+  health_check_path   = "/"
+  name_prefix         = "front-"
   security_groups     = module.lb_sg.security_group_id
   ssl_certificate_arn = var.ssl_certificate_arn
   tags                = local.final_tags
