@@ -51,18 +51,13 @@ variable "image_owner" {
   type        = string
   default     = "679593333241"
 }
-variable "ssh_keys" {
-  description = "Create ssh keys"
-  type        = map(string)
-  default     = {}
-}
 variable "tags" {
   description = "Add custom tags for all resources managed by this script"
   type        = map(string)
   default     = {}
 }
 variable "ssl_certificate_arn" {
-  description = "Certificate for ALB"
+  description = "Certificate for ALB. If using new frontend. Certificate should be valid for main_domain and all domains of microservices"
   type        = string
   default     = ""
 }
@@ -75,6 +70,11 @@ variable "create_iam_instance_profile_ssm_policy" {
   description = "Determines whether an IAM instance profile with SSM policy is created or to use an existing IAM instance profile"
   type        = string
   default     = false
+}
+variable "new_frontend_domain" {
+  description = "Domain of new frontend"
+  type        = string
+  default     = ""
 }
 
 ## Network
@@ -176,10 +176,10 @@ variable "new_frontend_settings" {
   description = "Settings of new frontend"
   type = object({
     docker_image       = optional(string, "ghcr.io/blockscout/frontend:main")
-    domain             = optional(string)
     stats_api_url      = optional(string)
     rpc_address        = optional(string, "https://rpc-supertestnet.polygon.technology")
     visualizer_api_url = optional(string)
+    backend_url        = optional(string)
   })
   default = {}
 }

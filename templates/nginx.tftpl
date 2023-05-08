@@ -1,0 +1,38 @@
+events {
+  worker_connections  1024;
+}
+
+http {
+  index    index.html index.htm index.php;
+  log_format   main '\$${remote_addr} - \$${remote_user} [\$${time_local}]  \$${status} '
+    '"\$${request}" \$${body_bytes_sent} "\$${http_referer}" '
+    '"\$${http_user_agent}" "\$${http_x_forwarded_for}"';
+  server {
+    listen ${backend_port} default_server;
+
+    location / {
+      proxy_pass http://${service_name}:${backend_port};
+      ## Rewrite CORS
+      proxy_hide_header 'access-control-allow-credentials';
+      proxy_hide_header 'access-control-allow-origin';
+      proxy_hide_header 'access-control-expose-headers';
+%{ if new_frontend_domain == "" ~}
+      add_header 'Access-Control-Allow-Origin' \$${http_origin};
+%{ else ~}
+      add_header 'Access-Control-Allow-Origin' ${new_frontend_domain};
+%{ endif ~}
+      add_header 'Access-Control-Allow-Credentials' 'true';
+      add_header 'Access-Control-Allow-Methods' 'PUT, GET, POST, OPTIONS, DELETE, PATCH';
+      add_header 'Access-Control-Allow-Headers' 'DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,x-csrf-token';
+      add_header 'Access-Control-Expose-Headers' 'x-bs-account-csrf';
+    }
+    location /socket {
+      proxy_pass http://${service_name}:${backend_port};
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade \$${http_upgrade};
+      proxy_set_header Connection "Upgrade";
+      proxy_set_header X-Forwarded-For \$${proxy_add_x_forwarded_for};
+      proxy_set_header Host \$${host};
+    }
+  }
+}

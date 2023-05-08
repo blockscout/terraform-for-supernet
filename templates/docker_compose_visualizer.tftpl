@@ -1,12 +1,22 @@
 version: '3.8'
 services:
+  nginx:
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8050:8050
+    networks:
+      - blockscout
   visualizer:
     container_name: 'visualizer'
     image: ${docker_image}
     restart: always
+    networks:
+      - blockscout
     environment:
       VISUALIZER__SERVER__GRPC__ENABLED: "false"
-    ports:
-      - 8050:8050
     volumes:
       - ./logs/:/app/logs/
+networks:
+  blockscout:

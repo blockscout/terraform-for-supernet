@@ -50,3 +50,7 @@ variable "docker_compose_file_postfix" {
   type    = string
   default = ""
 }
+variable "nginx_config" {
+  type    = any
+  default = {}
+}

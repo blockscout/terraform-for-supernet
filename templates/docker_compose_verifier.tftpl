@@ -1,9 +1,19 @@
 version: '3.8'
 services:
+  nginx:
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8050:8050
+    networks:
+      - blockscout
   smart-contract-verifier:
     container_name: 'smart-contract-verifier'
     image: ${docker_image}
     restart: always
+    networks:
+      - blockscout
     environment:
       SMART_CONTRACT_VERIFIER__SERVER__HTTP__ENABLED: "true"
       SMART_CONTRACT_VERIFIER__SERVER__HTTP__ADDR: "0.0.0.0:8050"
@@ -24,7 +34,7 @@ services:
       SMART_CONTRACT_VERIFIER__SOURCIFY__REQUEST_TIMEOUT: "10"
       SMART_CONTRACT_VERIFIER__METRICS__ENABLED: "false"
       SMART_CONTRACT_VERIFIER__JAEGER__ENABLED: "false"
-    ports:
-      - 8050:8050
     volumes:
       - ./logs/:/app/logs/
+networks:
+  blockscout:

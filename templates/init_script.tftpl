@@ -17,6 +17,11 @@ mkdir -p $DEST
 cat > $DEST/docker-compose.yml <<-TEMPLATE
 ${docker_compose_str}
 TEMPLATE
+%{ if nginx_config != "" ~}
+cat > $DEST/nginx.conf <<-TEMPLATE
+${nginx_config}
+TEMPLATE
+%{ endif ~}
 cat > /etc/systemd/system/docker_compose_service.service <<-TEMPLATE
 [Unit]
 Description=Service for starting docker-compose for blockscout

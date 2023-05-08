@@ -1,9 +1,19 @@
 version: '3.8'
 services:
+  nginx:
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8050:8050
+    networks:
+      - blockscout
   eth-bytecode-db:
     container_name: 'eth-bytecode-db'
     image: ${docker_image}
     restart: always
+    networks:
+      - blockscout
     environment:
       ETH_BYTECODE_DB__DATABASE__RUN_MIGRATIONS: "true"
       ETH_BYTECODE_DB__DATABASE__URL: 'postgresql://${postgres_user}:${postgres_password}@${postgres_host}:5432/eth-bytecode-db'
@@ -13,8 +23,7 @@ services:
       ETH_BYTECODE_DB__VERIFIER__URI: '${verifier_url}'
       ETH_BYTECODE_DB__DATABASE__CREATE_DATABASE: "${create_database}"
       RUST_LOG : info
-    ports:
-      - 8050:8050
-      - 8051:8051
     volumes:
       - ./logs/:/app/logs/
+networks:
+  blockscout:

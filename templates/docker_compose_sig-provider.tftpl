@@ -1,11 +1,20 @@
 version: '3.8'
 services:
+  nginx:
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8050:8050
+    networks:
+      - blockscout
   sig-provider:
     container_name: 'sig-provider'
     image: ${docker_image}
     restart: always
-    ports:
-      - 8050:8050
-      - 8051:8051
+    networks:
+      - blockscout
     volumes:
       - ./logs/:/app/logs/
+networks:
+  blockscout:

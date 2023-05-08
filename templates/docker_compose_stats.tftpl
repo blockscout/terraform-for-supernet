@@ -1,9 +1,19 @@
 version: '3.8'
 services:
+  nginx:
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8050:8050
+    networks:
+      - blockscout
   stats:
     container_name: 'stats'
     image: ${docker_image}
     restart: always
+    networks:
+      - blockscout
     environment:
       RUST_LOG: "info"
       STATS__BLOCKSCOUT_DB_URL: 'postgresql://${postgres_user}:${postgres_password}@${postgres_host}:5432/blockscout'
@@ -12,8 +22,7 @@ services:
       STATS__RUN_MIGRATIONS: "true"
       STATS__TRACING__FORMAT: "json"
       STATS__CREATE_DATABASE: "${create_database}"
-    ports:
-      - 8050:8050
-      - 8051:8051
     volumes:
       - ./logs/:/app/logs/
+networks:
+  blockscout:

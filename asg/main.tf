@@ -39,6 +39,10 @@ module "ec2_asg" {
         "${path.module}/../templates/docker_compose${var.docker_compose_file_postfix}.tftpl",
         var.docker_compose_config
       )
+      nginx_config = var.nginx_config != {} ? templatefile(
+        "${path.module}/../templates/nginx.tftpl",
+        var.nginx_config
+      ) : ""
       path_docker_compose_files = var.path_docker_compose_files
       user                      = var.user
     }

@@ -1,0 +1,47 @@
+version: '3.8'
+services:
+  blockscout-indexer:
+    container_name: 'blockscout-indexer'
+    command: bash -c "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
+    image: ${blockscout_docker_image}
+    restart: always
+    networks:
+      - blockscout
+    environment:
+%{ if ws_address != "" ~}
+      ETHEREUM_JSONRPC_WS_URL: '${ws_address}'
+%{ endif ~}
+      DISABLE_WEBAPP: "true"
+      DISABLE_READ_API: "true"
+      DISABLE_WRITE_API: "true"
+      BLOCKSCOUT_VERSION: v5.1.3-beta
+      ETHEREUM_JSONRPC_TRACE_URL: '${rpc_address}'
+      ETHEREUM_JSONRPC_HTTP_URL: '${rpc_address}'
+      ETHEREUM_JSONRPC_VARIANT: "nethermind"
+      HEART_BEAT_TIMEOUT: "30"
+      CACHE_BLOCK_COUNT_PERIOD: "7200"
+      DATABASE_URL: 'postgresql://${postgres_user}:${postgres_password}@${postgres_host}:5432/blockscout?ssl=false'
+      ECTO_USE_SSL: "false"
+      PORT: "4000"
+      SUBNETWORK: "Supernets"
+      HEALTHY_BLOCKS_PERIOD: "60"
+      NETWORK: "(Polygon)"
+      NETWORK_ICON: "_network_icon.html"
+      COIN: "MATIC"
+      COIN_NAME: "MATIC"
+      TXS_STATS_DAYS_TO_COMPILE_AT_INIT: "1"
+      COIN_BALANCE_HISTORY_DAYS: "90"
+      POOL_SIZE: "20"
+      DISPLAY_TOKEN_ICONS: "true"
+      FETCH_REWARDS_WAY: "manual"
+      INDEXER_DISABLE_PENDING_TRANSACTIONS_FETCHER: "true"
+      INDEXER_DISABLE_INTERNAL_TRANSACTIONS_FETCHER: "true"
+      CHAIN_ID: '${chain_id}'
+      GRAPHIQL_TRANSACTION: "0x728e0551d657e418762b14a264a4d120da3f5277a690db1e8b2a5781848b8589"
+      MICROSERVICE_SC_VERIFIER_ENABLED: "true"
+      MICROSERVICE_SC_VERIFIER_URL: '${rust_verification_service_url}'
+      INDEXER_MEMORY_LIMIT: "3"
+    volumes:
+      - ./logs/:/app/logs/
+networks:
+  blockscout:
