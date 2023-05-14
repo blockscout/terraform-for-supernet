@@ -16,10 +16,10 @@ http {
       proxy_hide_header 'access-control-allow-credentials';
       proxy_hide_header 'access-control-allow-origin';
       proxy_hide_header 'access-control-expose-headers';
-%{ if new_frontend_domain == "" ~}
+%{ if new_frontend_url == "" ~}
       add_header 'Access-Control-Allow-Origin' \$${http_origin};
 %{ else ~}
-      add_header 'Access-Control-Allow-Origin' ${new_frontend_domain};
+      add_header 'Access-Control-Allow-Origin' ${new_frontend_url};
 %{ endif ~}
       add_header 'Access-Control-Allow-Credentials' 'true';
       add_header 'Access-Control-Allow-Methods' 'PUT, GET, POST, OPTIONS, DELETE, PATCH';

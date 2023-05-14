@@ -152,9 +152,9 @@ module "ec2_asg_api_and_ui" {
     new_frontend_enabled          = var.new_frontend_enabled
   }
   nginx_config = {
-    service_name        = "blockscout-api-and-ui"
-    backend_port        = 4000
-    new_frontend_domain = var.new_frontend_domain
+    service_name     = "blockscout-api-and-ui"
+    backend_port     = 4000
+    new_frontend_url = var.new_frontend_url
   }
   tags = local.final_tags
 }
@@ -182,12 +182,12 @@ module "ec2_asg_new_frontend" {
   security_groups             = module.app_new_frontend_sg.security_group_id
   docker_compose_config = {
     docker_image       = var.new_frontend_settings["docker_image"]
-    stats_api_url      = var.new_frontend_settings["stats_api_url"] != null ? var.new_frontend_settings["stats_api_url"] : module.alb_stats[0].lb_dns_name
+    stats_api_url      = var.new_frontend_settings["stats_api_url"] != null ? var.new_frontend_settings["stats_api_url"] : (var.ssl_certificate_arn != "" ? "https://${module.alb_stats[0].lb_dns_name}" : "http://${module.alb_stats[0].lb_dns_name}")
     rpc_address        = var.new_frontend_settings["rpc_address"]
-    visualizer_api_url = var.new_frontend_settings["visualizer_api_url"] != null ? var.new_frontend_settings["visualizer_api_url"] : module.alb_visualizer[0].lb_dns_name
+    visualizer_api_url = var.new_frontend_settings["visualizer_api_url"] != null ? var.new_frontend_settings["visualizer_api_url"] : (var.ssl_certificate_arn != "" ? "https://${module.alb_visualizer[0].lb_dns_name}" : "http://${module.alb_visualizer[0].lb_dns_name}")
     backend_url        = var.new_frontend_settings["backend_url"] != null ? var.new_frontend_settings["backend_url"] : module.alb.lb_dns_name
-    backend_protocol   = var.new_frontend_domain != "" && var.ssl_certificate_arn != "" ? "https" : "http"
-    ws_protocol        = var.new_frontend_domain != "" && var.ssl_certificate_arn != "" ? "wss" : "ws"
+    backend_protocol   = var.ssl_certificate_arn != "" ? "https" : "http"
+    ws_protocol        = var.ssl_certificate_arn != "" ? "wss" : "ws"
   }
   tags = local.final_tags
 }
@@ -222,9 +222,9 @@ module "ec2_asg_verifier" {
     sourcify_api_url                   = var.verifier_settings["sourcify_api_url"]
   }
   nginx_config = {
-    service_name        = "smart-contract-verifier"
-    backend_port        = 8050
-    new_frontend_domain = var.new_frontend_domain
+    service_name     = "smart-contract-verifier"
+    backend_port     = 8050
+    new_frontend_url = var.new_frontend_url
   }
   tags = local.final_tags
 }
@@ -254,9 +254,9 @@ module "ec2_asg_visualizer" {
     docker_image = var.visualizer_docker_image
   }
   nginx_config = {
-    service_name        = "visualizer"
-    backend_port        = 8050
-    new_frontend_domain = var.new_frontend_domain
+    service_name     = "visualizer"
+    backend_port     = 8050
+    new_frontend_url = var.new_frontend_url
   }
   tags = local.final_tags
 }
@@ -286,9 +286,9 @@ module "ec2_asg_sig_provider" {
     docker_image = var.sig_provider_docker_image
   }
   nginx_config = {
-    service_name        = "sig-provider"
-    backend_port        = 8050
-    new_frontend_domain = var.new_frontend_domain
+    service_name     = "sig-provider"
+    backend_port     = 8050
+    new_frontend_url = var.new_frontend_url
   }
   tags = local.final_tags
 }
@@ -322,9 +322,9 @@ module "ec2_asg_stats" {
     create_database   = var.stats_create_database
   }
   nginx_config = {
-    service_name        = "stats"
-    backend_port        = 8050
-    new_frontend_domain = var.new_frontend_domain
+    service_name     = "stats"
+    backend_port     = 8050
+    new_frontend_url = var.new_frontend_url
   }
   tags = local.final_tags
 }
@@ -359,9 +359,9 @@ module "ec2_asg_eth_bytecode_db" {
     create_database   = var.eth_bytecode_db_create_database
   }
   nginx_config = {
-    service_name        = "eth-bytecode-db"
-    backend_port        = 8050
-    new_frontend_domain = var.new_frontend_domain
+    service_name     = "eth-bytecode-db"
+    backend_port     = 8050
+    new_frontend_url = var.new_frontend_url
   }
   tags = local.final_tags
 }

@@ -71,7 +71,7 @@ variable "create_iam_instance_profile_ssm_policy" {
   type        = string
   default     = false
 }
-variable "new_frontend_domain" {
+variable "new_frontend_url" {
   description = "Domain of new frontend"
   type        = string
   default     = ""

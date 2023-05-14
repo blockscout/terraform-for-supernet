@@ -44,14 +44,14 @@ module "vpc" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.64.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.67.0 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | 3.4.3 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.64.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.67.0 |
 | <a name="provider_random"></a> [random](#provider\_random) | 3.4.3 |
 
 ## Modules
@@ -127,10 +127,10 @@ module "vpc" {
 | <a name="input_image_name"></a> [image\_name](#input\_image\_name) | OS image mask | `string` | `"ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-202304*"` | no |
 | <a name="input_image_owner"></a> [image\_owner](#input\_image\_owner) | ID of image owner | `string` | `"679593333241"` | no |
 | <a name="input_indexer_instance_type"></a> [indexer\_instance\_type](#input\_indexer\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
-| <a name="input_new_frontend_domain"></a> [new\_frontend\_domain](#input\_new\_frontend\_domain) | Domain of new frontend | `string` | `""` | no |
 | <a name="input_new_frontend_enabled"></a> [new\_frontend\_enabled](#input\_new\_frontend\_enabled) | Switch to new frontend | `bool` | `true` | no |
 | <a name="input_new_frontend_instance_type"></a> [new\_frontend\_instance\_type](#input\_new\_frontend\_instance\_type) | AWS instance type | `string` | `"t2.medium"` | no |
 | <a name="input_new_frontend_settings"></a> [new\_frontend\_settings](#input\_new\_frontend\_settings) | Settings of new frontend | <pre>object({<br>    docker_image       = optional(string, "ghcr.io/blockscout/frontend:main")<br>    stats_api_url      = optional(string)<br>    rpc_address        = optional(string, "https://rpc-supertestnet.polygon.technology")<br>    visualizer_api_url = optional(string)<br>    backend_url        = optional(string)<br>  })</pre> | `{}` | no |
+| <a name="input_new_frontend_url"></a> [new\_frontend\_url](#input\_new\_frontend\_url) | Domain of new frontend | `string` | `""` | no |
 | <a name="input_path_docker_compose_files"></a> [path\_docker\_compose\_files](#input\_path\_docker\_compose\_files) | Path in ec2 instance for blockscout files | `string` | `"/opt/blockscout"` | no |
 | <a name="input_rds_allocated_storage"></a> [rds\_allocated\_storage](#input\_rds\_allocated\_storage) | Size of rds storage | `number` | `20` | no |
 | <a name="input_rds_instance_type"></a> [rds\_instance\_type](#input\_rds\_instance\_type) | AWS RDS instance type | `string` | `"db.t3.large"` | no |
